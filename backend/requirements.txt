@@ -1,0 +1,13 @@
+icrawler==0.6.7
+opencv-python>=4.8.0
+Pillow>=10.0.0
+tqdm>=4.66.0
+tensorflow>=2.13.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+scikit-learn>=1.3.0
+seaborn>=0.13.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+sqlalchemy>=2.0.0

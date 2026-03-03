@@ -1,0 +1,286 @@
+[
+  {
+    "file": "deer\\000009.jpg",
+    "reason": "wrong_class: deer->leopard (0.569)"
+  },
+  {
+    "file": "tiger\\000086.jpg",
+    "reason": "wrong_class: tiger->leopard (0.598)"
+  },
+  {
+    "file": "tiger\\000090.jpg",
+    "reason": "wrong_class: tiger->leopard (0.624)"
+  },
+  {
+    "file": "deer\\000018.jpg",
+    "reason": "no_signal: prob=0.141, entropy=0.982"
+  },
+  {
+    "file": "wolf\\000321.jpg",
+    "reason": "no_signal: prob=0.150, entropy=0.875"
+  },
+  {
+    "file": "elephant\\000075.jpg",
+    "reason": "wrong_class: elephant->leopard (0.687)"
+  },
+  {
+    "file": "leopard\\000203.jpg",
+    "reason": "wrong_class: leopard->wolf (0.639)"
+  },
+  {
+    "file": "deer\\000217.jpg",
+    "reason": "no_signal: prob=0.179, entropy=0.896"
+  },
+  {
+    "file": "wolf\\000120.jpg",
+    "reason": "wrong_class: wolf->deer (0.748)"
+  },
+  {
+    "file": "elephant\\000091.jpg",
+    "reason": "wrong_class: elephant->tiger (0.816)"
+  },
+  {
+    "file": "deer\\000037.jpg",
+    "reason": "wrong_class: deer->wolf (0.629)"
+  },
+  {
+    "file": "leopard\\000003.jpg",
+    "reason": "wrong_class: leopard->tiger (0.553)"
+  },
+  {
+    "file": "leopard\\000005.jpg",
+    "reason": "no_signal: prob=0.146, entropy=0.860"
+  },
+  {
+    "file": "leopard\\000219.jpg",
+    "reason": "wrong_class: leopard->wolf (0.783)"
+  },
+  {
+    "file": "deer\\000231.jpg",
+    "reason": "no_signal: prob=0.144, entropy=0.867"
+  },
+  {
+    "file": "deer\\000051.jpg",
+    "reason": "wrong_class: deer->wolf (0.676)"
+  },
+  {
+    "file": "deer\\000052.jpg",
+    "reason": "wrong_class: deer->wolf (0.754)"
+  },
+  {
+    "file": "leopard\\000226.jpg",
+    "reason": "wrong_class: leopard->tiger (0.579)"
+  },
+  {
+    "file": "tiger\\000138.jpg",
+    "reason": "wrong_class: tiger->leopard (0.606)"
+  },
+  {
+    "file": "leopard\\000231.jpg",
+    "reason": "no_signal: prob=0.180, entropy=0.875"
+  },
+  {
+    "file": "leopard\\000234.jpg",
+    "reason": "wrong_class: leopard->wolf (0.652)"
+  },
+  {
+    "file": "leopard\\000020.jpg",
+    "reason": "wrong_class: leopard->tiger (0.665)"
+  },
+  {
+    "file": "leopard\\000017.jpg",
+    "reason": "no_signal: prob=0.157, entropy=0.895"
+  },
+  {
+    "file": "tiger\\000146.jpg",
+    "reason": "wrong_class: tiger->wolf (0.694)"
+  },
+  {
+    "file": "leopard\\000232.jpg",
+    "reason": "no_signal: prob=0.146, entropy=0.964"
+  },
+  {
+    "file": "wolf\\000135.jpg",
+    "reason": "no_signal: prob=0.126, entropy=0.889"
+  },
+  {
+    "file": "wolf\\000150.jpg",
+    "reason": "wrong_class: wolf->tiger (0.578)"
+  },
+  {
+    "file": "wolf\\000392.jpg",
+    "reason": "wrong_class: wolf->leopard (0.650)"
+  },
+  {
+    "file": "deer\\000069.jpg",
+    "reason": "no_signal: prob=0.129, entropy=0.960"
+  },
+  {
+    "file": "leopard\\000029.jpg",
+    "reason": "no_signal: prob=0.152, entropy=0.898"
+  },
+  {
+    "file": "leopard\\000030.jpg",
+    "reason": "no_signal: prob=0.136, entropy=0.893"
+  },
+  {
+    "file": "deer\\000077.jpg",
+    "reason": "wrong_class: deer->leopard (0.574)"
+  },
+  {
+    "file": "deer\\000079.jpg",
+    "reason": "wrong_class: deer->tiger (0.642)"
+  },
+  {
+    "file": "leopard\\000031.jpg",
+    "reason": "no_signal: prob=0.156, entropy=0.911"
+  },
+  {
+    "file": "deer\\000082.jpg",
+    "reason": "no_signal: prob=0.160, entropy=0.971"
+  },
+  {
+    "file": "leopard\\000055.jpg",
+    "reason": "no_signal: prob=0.140, entropy=0.919"
+  },
+  {
+    "file": "deer\\000093.jpg",
+    "reason": "wrong_class: deer->elephant (0.725)"
+  },
+  {
+    "file": "deer\\000280.jpg",
+    "reason": "wrong_class: deer->leopard (0.561)"
+  },
+  {
+    "file": "elephant\\000137.jpg",
+    "reason": "no_signal: prob=0.176, entropy=0.904"
+  },
+  {
+    "file": "wolf\\000015.jpg",
+    "reason": "wrong_class: wolf->elephant (0.607)"
+  },
+  {
+    "file": "wolf\\000017.jpg",
+    "reason": "wrong_class: wolf->leopard (0.692)"
+  },
+  {
+    "file": "wolf\\000187.jpg",
+    "reason": "wrong_class: wolf->tiger (0.571)"
+  },
+  {
+    "file": "leopard\\000066.jpg",
+    "reason": "wrong_class: leopard->tiger (0.565)"
+  },
+  {
+    "file": "leopard\\000312.jpg",
+    "reason": "no_signal: prob=0.038, entropy=0.860"
+  },
+  {
+    "file": "leopard\\000337.jpg",
+    "reason": "no_signal: prob=0.156, entropy=0.912"
+  },
+  {
+    "file": "deer\\000307.jpg",
+    "reason": "no_signal: prob=0.141, entropy=0.942"
+  },
+  {
+    "file": "wolf\\000230.jpg",
+    "reason": "wrong_class: wolf->leopard (0.821)"
+  },
+  {
+    "file": "deer\\000117.jpg",
+    "reason": "no_signal: prob=0.160, entropy=0.940"
+  },
+  {
+    "file": "wolf\\000044.jpg",
+    "reason": "wrong_class: wolf->tiger (0.641)"
+  },
+  {
+    "file": "wolf\\000239.jpg",
+    "reason": "wrong_class: wolf->leopard (0.697)"
+  },
+  {
+    "file": "leopard\\000410.jpg",
+    "reason": "wrong_class: leopard->tiger (0.609)"
+  },
+  {
+    "file": "wolf\\000241.jpg",
+    "reason": "wrong_class: wolf->deer (0.670)"
+  },
+  {
+    "file": "tiger\\000214.jpg",
+    "reason": "wrong_class: tiger->wolf (0.576)"
+  },
+  {
+    "file": "wolf\\000465.jpg",
+    "reason": "wrong_class: wolf->deer (0.559)"
+  },
+  {
+    "file": "deer\\000325.jpg",
+    "reason": "no_signal: prob=0.111, entropy=0.861"
+  },
+  {
+    "file": "tiger\\000003.jpg",
+    "reason": "no_signal: prob=0.179, entropy=0.886"
+  },
+  {
+    "file": "elephant\\000004.jpg",
+    "reason": "wrong_class: elephant->tiger (0.586)"
+  },
+  {
+    "file": "wolf\\000255.jpg",
+    "reason": "wrong_class: wolf->leopard (0.769)"
+  },
+  {
+    "file": "tiger\\000224.jpg",
+    "reason": "wrong_class: tiger->wolf (0.555)"
+  },
+  {
+    "file": "deer\\000134.jpg",
+    "reason": "wrong_class: deer->wolf (0.563)"
+  },
+  {
+    "file": "deer\\000135.jpg",
+    "reason": "wrong_class: deer->wolf (0.599)"
+  },
+  {
+    "file": "elephant\\000361.jpg",
+    "reason": "wrong_class: elephant->wolf (0.679)"
+  },
+  {
+    "file": "tiger\\000026.jpg",
+    "reason": "wrong_class: tiger->leopard (0.585)"
+  },
+  {
+    "file": "wolf\\000272.jpg",
+    "reason": "wrong_class: wolf->leopard (0.675)"
+  },
+  {
+    "file": "tiger\\000240.jpg",
+    "reason": "wrong_class: tiger->wolf (0.576)"
+  },
+  {
+    "file": "wolf\\000074.jpg",
+    "reason": "wrong_class: wolf->elephant (0.591)"
+  },
+  {
+    "file": "elephant\\000193.jpg",
+    "reason": "wrong_class: elephant->wolf (0.739)"
+  },
+  {
+    "file": "elephant\\000201.jpg",
+    "reason": "wrong_class: elephant->tiger (0.583)"
+  },
+  {
+    "file": "deer\\000159.jpg",
+    "reason": "wrong_class: deer->elephant (0.629)"
+  },
+  {
+    "file": "elephant\\000034.jpg",
+    "reason": "no_signal: prob=0.125, entropy=0.883"
+  },
+  {
+    "file": "tiger\\000053.jpg",
+    "reason": "no_signal: prob=0.163, entropy=0.931"
+  }
+]

@@ -1,0 +1,2882 @@
+[
+  {
+    "species": "deer",
+    "file": "000001.jpg",
+    "reason": "low_conf=0.123",
+    "correct_prob": 0.12298242747783661,
+    "predicted": "wolf",
+    "predicted_prob": 0.37508079409599304,
+    "entropy": 0.9096532975369626
+  },
+  {
+    "species": "deer",
+    "file": "000004.jpg",
+    "reason": "low_conf=0.110",
+    "correct_prob": 0.11034104973077774,
+    "predicted": "wolf",
+    "predicted_prob": 0.8584052920341492,
+    "entropy": 0.3167960018138307
+  },
+  {
+    "species": "deer",
+    "file": "000011.jpg",
+    "reason": "low_conf=0.025",
+    "correct_prob": 0.025391990318894386,
+    "predicted": "wolf",
+    "predicted_prob": 0.3511972725391388,
+    "entropy": 0.789243789107512
+  },
+  {
+    "species": "deer",
+    "file": "000014.jpg",
+    "reason": "low_conf=0.047",
+    "correct_prob": 0.04738648980855942,
+    "predicted": "wolf",
+    "predicted_prob": 0.8788031935691833,
+    "entropy": 0.3296048841579888
+  },
+  {
+    "species": "deer",
+    "file": "000015.jpg",
+    "reason": "low_conf=0.029",
+    "correct_prob": 0.028510956093668938,
+    "predicted": "elephant",
+    "predicted_prob": 0.8962986469268799,
+    "entropy": 0.2688336325084989
+  },
+  {
+    "species": "deer",
+    "file": "000016.jpg",
+    "reason": "no_signal(entropy=0.967)",
+    "correct_prob": 0.26223528385162354,
+    "predicted": "tiger",
+    "predicted_prob": 0.27682948112487793,
+    "entropy": 0.9666310180854475
+  },
+  {
+    "species": "deer",
+    "file": "000020.jpg",
+    "reason": "low_conf=0.039",
+    "correct_prob": 0.03904934599995613,
+    "predicted": "wolf",
+    "predicted_prob": 0.586602509021759,
+    "entropy": 0.7545036251039227
+  },
+  {
+    "species": "deer",
+    "file": "000022.jpg",
+    "reason": "no_signal(entropy=0.935)",
+    "correct_prob": 0.1743122786283493,
+    "predicted": "wolf",
+    "predicted_prob": 0.3320990800857544,
+    "entropy": 0.9349901189022881
+  },
+  {
+    "species": "deer",
+    "file": "000024.jpg",
+    "reason": "no_signal(entropy=0.917)",
+    "correct_prob": 0.22336333990097046,
+    "predicted": "wolf",
+    "predicted_prob": 0.3198627531528473,
+    "entropy": 0.9174988231519899
+  },
+  {
+    "species": "deer",
+    "file": "000032.jpg",
+    "reason": "no_signal(entropy=0.958)",
+    "correct_prob": 0.2822590470314026,
+    "predicted": "elephant",
+    "predicted_prob": 0.288324236869812,
+    "entropy": 0.9578562981685705
+  },
+  {
+    "species": "deer",
+    "file": "000038.jpg",
+    "reason": "low_conf=0.117",
+    "correct_prob": 0.11725044250488281,
+    "predicted": "leopard",
+    "predicted_prob": 0.6153126358985901,
+    "entropy": 0.7105655855799117
+  },
+  {
+    "species": "deer",
+    "file": "000041.jpg",
+    "reason": "no_signal(entropy=0.938)",
+    "correct_prob": 0.3264053463935852,
+    "predicted": "deer",
+    "predicted_prob": 0.3264053463935852,
+    "entropy": 0.9376932632662581
+  },
+  {
+    "species": "deer",
+    "file": "000046.jpg",
+    "reason": "low_conf=0.072",
+    "correct_prob": 0.07194114476442337,
+    "predicted": "wolf",
+    "predicted_prob": 0.46468159556388855,
+    "entropy": 0.8342624197570458
+  },
+  {
+    "species": "deer",
+    "file": "000049.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.04153037443757057,
+    "predicted": "elephant",
+    "predicted_prob": 0.8385621309280396,
+    "entropy": 0.4030998944727685
+  },
+  {
+    "species": "deer",
+    "file": "000056.jpg",
+    "reason": "low_conf=0.008",
+    "correct_prob": 0.007830462418496609,
+    "predicted": "leopard",
+    "predicted_prob": 0.8877657055854797,
+    "entropy": 0.3016536714834714
+  },
+  {
+    "species": "deer",
+    "file": "000064.jpg",
+    "reason": "no_signal(entropy=0.972)",
+    "correct_prob": 0.3146512508392334,
+    "predicted": "deer",
+    "predicted_prob": 0.3146512508392334,
+    "entropy": 0.9718485051971726
+  },
+  {
+    "species": "deer",
+    "file": "000065.jpg",
+    "reason": "low_conf=0.027",
+    "correct_prob": 0.02701040357351303,
+    "predicted": "tiger",
+    "predicted_prob": 0.6282245516777039,
+    "entropy": 0.6513462439591926
+  },
+  {
+    "species": "deer",
+    "file": "000066.jpg",
+    "reason": "no_signal(entropy=0.949)",
+    "correct_prob": 0.29120615124702454,
+    "predicted": "deer",
+    "predicted_prob": 0.29120615124702454,
+    "entropy": 0.9486334614301559
+  },
+  {
+    "species": "deer",
+    "file": "000068.jpg",
+    "reason": "no_signal(entropy=0.908)",
+    "correct_prob": 0.2962631285190582,
+    "predicted": "elephant",
+    "predicted_prob": 0.3677167594432831,
+    "entropy": 0.907914382062708
+  },
+  {
+    "species": "deer",
+    "file": "000070.jpg",
+    "reason": "low_conf=0.065",
+    "correct_prob": 0.06453903019428253,
+    "predicted": "tiger",
+    "predicted_prob": 0.40018486976623535,
+    "entropy": 0.9035838699820431
+  },
+  {
+    "species": "deer",
+    "file": "000071.jpg",
+    "reason": "no_signal(entropy=0.920)",
+    "correct_prob": 0.29078298807144165,
+    "predicted": "leopard",
+    "predicted_prob": 0.344611793756485,
+    "entropy": 0.9202366317593449
+  },
+  {
+    "species": "deer",
+    "file": "000072.jpg",
+    "reason": "low_conf=0.044",
+    "correct_prob": 0.044095478951931,
+    "predicted": "tiger",
+    "predicted_prob": 0.42094114422798157,
+    "entropy": 0.830089230011744
+  },
+  {
+    "species": "deer",
+    "file": "000078.jpg",
+    "reason": "low_conf=0.131",
+    "correct_prob": 0.13078570365905762,
+    "predicted": "elephant",
+    "predicted_prob": 0.6427191495895386,
+    "entropy": 0.6981157151752566
+  },
+  {
+    "species": "deer",
+    "file": "000084.jpg",
+    "reason": "no_signal(entropy=0.901)",
+    "correct_prob": 0.4442252218723297,
+    "predicted": "deer",
+    "predicted_prob": 0.4442252218723297,
+    "entropy": 0.9013236576168823
+  },
+  {
+    "species": "deer",
+    "file": "000085.jpg",
+    "reason": "low_conf=0.089",
+    "correct_prob": 0.08941719681024551,
+    "predicted": "tiger",
+    "predicted_prob": 0.6175012588500977,
+    "entropy": 0.7354582898440901
+  },
+  {
+    "species": "deer",
+    "file": "000090.jpg",
+    "reason": "no_signal(entropy=0.992)",
+    "correct_prob": 0.22563008964061737,
+    "predicted": "elephant",
+    "predicted_prob": 0.22635319828987122,
+    "entropy": 0.9921519006576361
+  },
+  {
+    "species": "deer",
+    "file": "000091.jpg",
+    "reason": "low_conf=0.148",
+    "correct_prob": 0.14767847955226898,
+    "predicted": "wolf",
+    "predicted_prob": 0.45584315061569214,
+    "entropy": 0.811742216304549
+  },
+  {
+    "species": "deer",
+    "file": "000100.jpg",
+    "reason": "low_conf=0.094",
+    "correct_prob": 0.09445477277040482,
+    "predicted": "leopard",
+    "predicted_prob": 0.38603711128234863,
+    "entropy": 0.904313967091117
+  },
+  {
+    "species": "deer",
+    "file": "000101.jpg",
+    "reason": "low_conf=0.101",
+    "correct_prob": 0.10108061879873276,
+    "predicted": "tiger",
+    "predicted_prob": 0.45626455545425415,
+    "entropy": 0.7379418199310586
+  },
+  {
+    "species": "deer",
+    "file": "000115.jpg",
+    "reason": "low_conf=0.113",
+    "correct_prob": 0.11280913650989532,
+    "predicted": "elephant",
+    "predicted_prob": 0.3321167826652527,
+    "entropy": 0.9570189492979121
+  },
+  {
+    "species": "deer",
+    "file": "000116.jpg",
+    "reason": "no_signal(entropy=0.970)",
+    "correct_prob": 0.20562027394771576,
+    "predicted": "tiger",
+    "predicted_prob": 0.274563729763031,
+    "entropy": 0.9699441198089815
+  },
+  {
+    "species": "deer",
+    "file": "000138.jpg",
+    "reason": "low_conf=0.078",
+    "correct_prob": 0.07790931314229965,
+    "predicted": "wolf",
+    "predicted_prob": 0.8785714507102966,
+    "entropy": 0.2984352483264052
+  },
+  {
+    "species": "deer",
+    "file": "000165.jpg",
+    "reason": "low_conf=0.065",
+    "correct_prob": 0.06505031138658524,
+    "predicted": "wolf",
+    "predicted_prob": 0.5104421377182007,
+    "entropy": 0.7820541435676444
+  },
+  {
+    "species": "deer",
+    "file": "000172.jpg",
+    "reason": "no_signal(entropy=0.906)",
+    "correct_prob": 0.36245566606521606,
+    "predicted": "deer",
+    "predicted_prob": 0.36245566606521606,
+    "entropy": 0.90610295313915
+  },
+  {
+    "species": "deer",
+    "file": "000185.jpg",
+    "reason": "no_signal(entropy=0.963)",
+    "correct_prob": 0.2980126440525055,
+    "predicted": "deer",
+    "predicted_prob": 0.2980126440525055,
+    "entropy": 0.9631765188392167
+  },
+  {
+    "species": "deer",
+    "file": "000187.jpg",
+    "reason": "no_signal(entropy=0.915)",
+    "correct_prob": 0.41437920928001404,
+    "predicted": "deer",
+    "predicted_prob": 0.41437920928001404,
+    "entropy": 0.9145823603671889
+  },
+  {
+    "species": "deer",
+    "file": "000190.jpg",
+    "reason": "no_signal(entropy=0.946)",
+    "correct_prob": 0.3533547520637512,
+    "predicted": "deer",
+    "predicted_prob": 0.3533547520637512,
+    "entropy": 0.9455573061053159
+  },
+  {
+    "species": "deer",
+    "file": "000191.jpg",
+    "reason": "low_conf=0.030",
+    "correct_prob": 0.030342739075422287,
+    "predicted": "tiger",
+    "predicted_prob": 0.39188143610954285,
+    "entropy": 0.8513200421205501
+  },
+  {
+    "species": "deer",
+    "file": "000192.jpg",
+    "reason": "no_signal(entropy=0.919)",
+    "correct_prob": 0.30255618691444397,
+    "predicted": "elephant",
+    "predicted_prob": 0.31844595074653625,
+    "entropy": 0.9194418725039566
+  },
+  {
+    "species": "deer",
+    "file": "000193.jpg",
+    "reason": "low_conf=0.034",
+    "correct_prob": 0.03353823721408844,
+    "predicted": "tiger",
+    "predicted_prob": 0.4329787492752075,
+    "entropy": 0.8442416480626577
+  },
+  {
+    "species": "deer",
+    "file": "000197.jpg",
+    "reason": "no_signal(entropy=0.917)",
+    "correct_prob": 0.24672602117061615,
+    "predicted": "wolf",
+    "predicted_prob": 0.3910427987575531,
+    "entropy": 0.916706137825693
+  },
+  {
+    "species": "deer",
+    "file": "000198.jpg",
+    "reason": "low_conf=0.049",
+    "correct_prob": 0.049338024109601974,
+    "predicted": "wolf",
+    "predicted_prob": 0.47073131799697876,
+    "entropy": 0.6564158895542582
+  },
+  {
+    "species": "deer",
+    "file": "000209.jpg",
+    "reason": "no_signal(entropy=0.925)",
+    "correct_prob": 0.26637446880340576,
+    "predicted": "deer",
+    "predicted_prob": 0.26637446880340576,
+    "entropy": 0.9245643292219572
+  },
+  {
+    "species": "deer",
+    "file": "000211.jpg",
+    "reason": "no_signal(entropy=0.908)",
+    "correct_prob": 0.2831553518772125,
+    "predicted": "tiger",
+    "predicted_prob": 0.362076073884964,
+    "entropy": 0.9082507289199977
+  },
+  {
+    "species": "deer",
+    "file": "000213.jpg",
+    "reason": "low_conf=0.107",
+    "correct_prob": 0.1074797734618187,
+    "predicted": "tiger",
+    "predicted_prob": 0.6725857257843018,
+    "entropy": 0.6567631245392779
+  },
+  {
+    "species": "deer",
+    "file": "000216.jpg",
+    "reason": "no_signal(entropy=0.924)",
+    "correct_prob": 0.1979074776172638,
+    "predicted": "wolf",
+    "predicted_prob": 0.2933468818664551,
+    "entropy": 0.9238159370955412
+  },
+  {
+    "species": "deer",
+    "file": "000220.jpg",
+    "reason": "no_signal(entropy=0.922)",
+    "correct_prob": 0.3821313679218292,
+    "predicted": "deer",
+    "predicted_prob": 0.3821313679218292,
+    "entropy": 0.9215333559237516
+  },
+  {
+    "species": "deer",
+    "file": "000222.jpg",
+    "reason": "no_signal(entropy=0.923)",
+    "correct_prob": 0.36369994282722473,
+    "predicted": "deer",
+    "predicted_prob": 0.36369994282722473,
+    "entropy": 0.9226369824759684
+  },
+  {
+    "species": "deer",
+    "file": "000225.jpg",
+    "reason": "no_signal(entropy=0.926)",
+    "correct_prob": 0.16947297751903534,
+    "predicted": "wolf",
+    "predicted_prob": 0.3715311884880066,
+    "entropy": 0.9262129547118392
+  },
+  {
+    "species": "deer",
+    "file": "000232.jpg",
+    "reason": "no_signal(entropy=0.904)",
+    "correct_prob": 0.23797769844532013,
+    "predicted": "leopard",
+    "predicted_prob": 0.3045099675655365,
+    "entropy": 0.9039856196746084
+  },
+  {
+    "species": "deer",
+    "file": "000233.jpg",
+    "reason": "low_conf=0.084",
+    "correct_prob": 0.08442159742116928,
+    "predicted": "tiger",
+    "predicted_prob": 0.43950340151786804,
+    "entropy": 0.7571994366471765
+  },
+  {
+    "species": "deer",
+    "file": "000235.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.04173487424850464,
+    "predicted": "elephant",
+    "predicted_prob": 0.695771336555481,
+    "entropy": 0.575968217132753
+  },
+  {
+    "species": "deer",
+    "file": "000237.jpg",
+    "reason": "no_signal(entropy=0.933)",
+    "correct_prob": 0.2129272073507309,
+    "predicted": "leopard",
+    "predicted_prob": 0.2722478210926056,
+    "entropy": 0.9327291658481661
+  },
+  {
+    "species": "deer",
+    "file": "000243.jpg",
+    "reason": "no_signal(entropy=0.915)",
+    "correct_prob": 0.27108970284461975,
+    "predicted": "tiger",
+    "predicted_prob": 0.2910537123680115,
+    "entropy": 0.9150057381774218
+  },
+  {
+    "species": "deer",
+    "file": "000244.jpg",
+    "reason": "no_signal(entropy=0.909)",
+    "correct_prob": 0.3726198077201843,
+    "predicted": "deer",
+    "predicted_prob": 0.3726198077201843,
+    "entropy": 0.9094904941032866
+  },
+  {
+    "species": "deer",
+    "file": "000245.jpg",
+    "reason": "low_conf=0.119",
+    "correct_prob": 0.11854171752929688,
+    "predicted": "tiger",
+    "predicted_prob": 0.5694825649261475,
+    "entropy": 0.7865517550779604
+  },
+  {
+    "species": "deer",
+    "file": "000249.jpg",
+    "reason": "low_conf=0.127",
+    "correct_prob": 0.12697413563728333,
+    "predicted": "elephant",
+    "predicted_prob": 0.26285213232040405,
+    "entropy": 0.9774838149519215
+  },
+  {
+    "species": "deer",
+    "file": "000260.jpg",
+    "reason": "no_signal(entropy=0.953)",
+    "correct_prob": 0.29919081926345825,
+    "predicted": "deer",
+    "predicted_prob": 0.29919081926345825,
+    "entropy": 0.9527013992740685
+  },
+  {
+    "species": "deer",
+    "file": "000265.jpg",
+    "reason": "low_conf=0.145",
+    "correct_prob": 0.14481547474861145,
+    "predicted": "elephant",
+    "predicted_prob": 0.5256420969963074,
+    "entropy": 0.8118154704428137
+  },
+  {
+    "species": "deer",
+    "file": "000272.jpg",
+    "reason": "no_signal(entropy=0.945)",
+    "correct_prob": 0.290566086769104,
+    "predicted": "wolf",
+    "predicted_prob": 0.3070073127746582,
+    "entropy": 0.9454339073243767
+  },
+  {
+    "species": "deer",
+    "file": "000275.jpg",
+    "reason": "low_conf=0.069",
+    "correct_prob": 0.06866944581270218,
+    "predicted": "elephant",
+    "predicted_prob": 0.5334213376045227,
+    "entropy": 0.7368284162845536
+  },
+  {
+    "species": "deer",
+    "file": "000276.jpg",
+    "reason": "no_signal(entropy=0.939)",
+    "correct_prob": 0.34872880578041077,
+    "predicted": "deer",
+    "predicted_prob": 0.34872880578041077,
+    "entropy": 0.9394346970829809
+  },
+  {
+    "species": "deer",
+    "file": "000279.jpg",
+    "reason": "no_signal(entropy=0.923)",
+    "correct_prob": 0.28597235679626465,
+    "predicted": "wolf",
+    "predicted_prob": 0.30810216069221497,
+    "entropy": 0.9227000891754643
+  },
+  {
+    "species": "deer",
+    "file": "000283.jpg",
+    "reason": "no_signal(entropy=0.949)",
+    "correct_prob": 0.25525692105293274,
+    "predicted": "elephant",
+    "predicted_prob": 0.3152237832546234,
+    "entropy": 0.948535172005002
+  },
+  {
+    "species": "deer",
+    "file": "000284.jpg",
+    "reason": "low_conf=0.040",
+    "correct_prob": 0.03988831862807274,
+    "predicted": "wolf",
+    "predicted_prob": 0.38803187012672424,
+    "entropy": 0.8535253694336846
+  },
+  {
+    "species": "deer",
+    "file": "000295.jpg",
+    "reason": "no_signal(entropy=0.906)",
+    "correct_prob": 0.3191075623035431,
+    "predicted": "deer",
+    "predicted_prob": 0.3191075623035431,
+    "entropy": 0.905544695869079
+  },
+  {
+    "species": "deer",
+    "file": "000301.jpg",
+    "reason": "no_signal(entropy=0.933)",
+    "correct_prob": 0.18610846996307373,
+    "predicted": "elephant",
+    "predicted_prob": 0.30940258502960205,
+    "entropy": 0.9326436903420414
+  },
+  {
+    "species": "deer",
+    "file": "000302.jpg",
+    "reason": "mislabeled\u2192elephant(0.818)",
+    "correct_prob": 0.16597092151641846,
+    "predicted": "elephant",
+    "predicted_prob": 0.8175259232521057,
+    "entropy": 0.3375430699620646
+  },
+  {
+    "species": "deer",
+    "file": "000310.jpg",
+    "reason": "no_signal(entropy=0.949)",
+    "correct_prob": 0.2435830980539322,
+    "predicted": "elephant",
+    "predicted_prob": 0.29483893513679504,
+    "entropy": 0.9487778217086975
+  },
+  {
+    "species": "deer",
+    "file": "000311.jpg",
+    "reason": "low_conf=0.055",
+    "correct_prob": 0.05453964322805405,
+    "predicted": "elephant",
+    "predicted_prob": 0.6316726803779602,
+    "entropy": 0.7081983436598547
+  },
+  {
+    "species": "deer",
+    "file": "000312.jpg",
+    "reason": "low_conf=0.113",
+    "correct_prob": 0.11252428591251373,
+    "predicted": "elephant",
+    "predicted_prob": 0.3253953158855438,
+    "entropy": 0.931692719784732
+  },
+  {
+    "species": "deer",
+    "file": "000317.jpg",
+    "reason": "low_conf=0.085",
+    "correct_prob": 0.08525407314300537,
+    "predicted": "tiger",
+    "predicted_prob": 0.5253506898880005,
+    "entropy": 0.807921298229203
+  },
+  {
+    "species": "deer",
+    "file": "000318.jpg",
+    "reason": "no_signal(entropy=0.932)",
+    "correct_prob": 0.2023075520992279,
+    "predicted": "tiger",
+    "predicted_prob": 0.3799581527709961,
+    "entropy": 0.9320165489985771
+  },
+  {
+    "species": "deer",
+    "file": "000320.jpg",
+    "reason": "low_conf=0.080",
+    "correct_prob": 0.08008445799350739,
+    "predicted": "tiger",
+    "predicted_prob": 0.5448985695838928,
+    "entropy": 0.7534342183817142
+  },
+  {
+    "species": "deer",
+    "file": "000327.jpg",
+    "reason": "no_signal(entropy=0.921)",
+    "correct_prob": 0.3461037278175354,
+    "predicted": "deer",
+    "predicted_prob": 0.3461037278175354,
+    "entropy": 0.9205023168897343
+  },
+  {
+    "species": "elephant",
+    "file": "000001.jpg",
+    "reason": "low_conf=0.039",
+    "correct_prob": 0.03932785242795944,
+    "predicted": "wolf",
+    "predicted_prob": 0.7613908052444458,
+    "entropy": 0.5143370811509596
+  },
+  {
+    "species": "elephant",
+    "file": "000005.jpg",
+    "reason": "low_conf=0.130",
+    "correct_prob": 0.12985023856163025,
+    "predicted": "tiger",
+    "predicted_prob": 0.5806906819343567,
+    "entropy": 0.7434948391422159
+  },
+  {
+    "species": "elephant",
+    "file": "000016.jpg",
+    "reason": "low_conf=0.063",
+    "correct_prob": 0.06312526762485504,
+    "predicted": "deer",
+    "predicted_prob": 0.3341616094112396,
+    "entropy": 0.9309575119218256
+  },
+  {
+    "species": "elephant",
+    "file": "000019.jpg",
+    "reason": "low_conf=0.047",
+    "correct_prob": 0.046798720955848694,
+    "predicted": "wolf",
+    "predicted_prob": 0.8389941453933716,
+    "entropy": 0.3947932529449341
+  },
+  {
+    "species": "elephant",
+    "file": "000020.jpg",
+    "reason": "no_signal(entropy=0.927)",
+    "correct_prob": 0.3919236361980438,
+    "predicted": "elephant",
+    "predicted_prob": 0.3919236361980438,
+    "entropy": 0.9267909143082786
+  },
+  {
+    "species": "elephant",
+    "file": "000022.jpg",
+    "reason": "low_conf=0.057",
+    "correct_prob": 0.05742165073752403,
+    "predicted": "deer",
+    "predicted_prob": 0.32421472668647766,
+    "entropy": 0.923938521118623
+  },
+  {
+    "species": "elephant",
+    "file": "000029.jpg",
+    "reason": "low_conf=0.138",
+    "correct_prob": 0.13811852037906647,
+    "predicted": "leopard",
+    "predicted_prob": 0.43840986490249634,
+    "entropy": 0.8571320802614459
+  },
+  {
+    "species": "elephant",
+    "file": "000031.jpg",
+    "reason": "no_signal(entropy=0.951)",
+    "correct_prob": 0.22510820627212524,
+    "predicted": "tiger",
+    "predicted_prob": 0.3392380475997925,
+    "entropy": 0.9506488020247376
+  },
+  {
+    "species": "elephant",
+    "file": "000040.jpg",
+    "reason": "low_conf=0.100",
+    "correct_prob": 0.09963371604681015,
+    "predicted": "wolf",
+    "predicted_prob": 0.43223559856414795,
+    "entropy": 0.8840110160440302
+  },
+  {
+    "species": "elephant",
+    "file": "000044.jpg",
+    "reason": "no_signal(entropy=0.928)",
+    "correct_prob": 0.3032987415790558,
+    "predicted": "deer",
+    "predicted_prob": 0.3098944425582886,
+    "entropy": 0.9278952074805605
+  },
+  {
+    "species": "elephant",
+    "file": "000045.jpg",
+    "reason": "no_signal(entropy=0.924)",
+    "correct_prob": 0.24085941910743713,
+    "predicted": "leopard",
+    "predicted_prob": 0.3496558666229248,
+    "entropy": 0.9242713126688988
+  },
+  {
+    "species": "elephant",
+    "file": "000068.jpg",
+    "reason": "no_signal(entropy=0.909)",
+    "correct_prob": 0.3022114932537079,
+    "predicted": "elephant",
+    "predicted_prob": 0.3022114932537079,
+    "entropy": 0.9086284062213235
+  },
+  {
+    "species": "elephant",
+    "file": "000069.jpg",
+    "reason": "no_signal(entropy=0.914)",
+    "correct_prob": 0.23650872707366943,
+    "predicted": "tiger",
+    "predicted_prob": 0.2910013198852539,
+    "entropy": 0.9139357389040443
+  },
+  {
+    "species": "elephant",
+    "file": "000071.jpg",
+    "reason": "low_conf=0.140",
+    "correct_prob": 0.14008286595344543,
+    "predicted": "leopard",
+    "predicted_prob": 0.335397332906723,
+    "entropy": 0.9581550920955264
+  },
+  {
+    "species": "elephant",
+    "file": "000102.jpg",
+    "reason": "no_signal(entropy=0.938)",
+    "correct_prob": 0.18908938765525818,
+    "predicted": "tiger",
+    "predicted_prob": 0.3036324381828308,
+    "entropy": 0.9376898560970365
+  },
+  {
+    "species": "elephant",
+    "file": "000151.jpg",
+    "reason": "low_conf=0.147",
+    "correct_prob": 0.14698638021945953,
+    "predicted": "leopard",
+    "predicted_prob": 0.33496880531311035,
+    "entropy": 0.8645757080461157
+  },
+  {
+    "species": "elephant",
+    "file": "000207.jpg",
+    "reason": "low_conf=0.139",
+    "correct_prob": 0.13937890529632568,
+    "predicted": "wolf",
+    "predicted_prob": 0.6619746088981628,
+    "entropy": 0.6511340365718032
+  },
+  {
+    "species": "elephant",
+    "file": "000228.jpg",
+    "reason": "low_conf=0.099",
+    "correct_prob": 0.09866749495267868,
+    "predicted": "tiger",
+    "predicted_prob": 0.5189989805221558,
+    "entropy": 0.8312347795591657
+  },
+  {
+    "species": "elephant",
+    "file": "000352.jpg",
+    "reason": "no_signal(entropy=0.909)",
+    "correct_prob": 0.37411293387413025,
+    "predicted": "elephant",
+    "predicted_prob": 0.37411293387413025,
+    "entropy": 0.9087783957359703
+  },
+  {
+    "species": "elephant",
+    "file": "000378.jpg",
+    "reason": "no_signal(entropy=0.901)",
+    "correct_prob": 0.34922122955322266,
+    "predicted": "elephant",
+    "predicted_prob": 0.34922122955322266,
+    "entropy": 0.9008739112796299
+  },
+  {
+    "species": "elephant",
+    "file": "000389.jpg",
+    "reason": "no_signal(entropy=0.901)",
+    "correct_prob": 0.2943175733089447,
+    "predicted": "leopard",
+    "predicted_prob": 0.36171436309814453,
+    "entropy": 0.9010872297004611
+  },
+  {
+    "species": "leopard",
+    "file": "000002.jpg",
+    "reason": "low_conf=0.120",
+    "correct_prob": 0.11992305517196655,
+    "predicted": "tiger",
+    "predicted_prob": 0.8237701654434204,
+    "entropy": 0.39466948381951433
+  },
+  {
+    "species": "leopard",
+    "file": "000004.jpg",
+    "reason": "low_conf=0.069",
+    "correct_prob": 0.06929944455623627,
+    "predicted": "tiger",
+    "predicted_prob": 0.759480357170105,
+    "entropy": 0.5138860756424731
+  },
+  {
+    "species": "leopard",
+    "file": "000008.jpg",
+    "reason": "low_conf=0.009",
+    "correct_prob": 0.008708345703780651,
+    "predicted": "tiger",
+    "predicted_prob": 0.9203832149505615,
+    "entropy": 0.23222456211796091
+  },
+  {
+    "species": "leopard",
+    "file": "000010.jpg",
+    "reason": "low_conf=0.123",
+    "correct_prob": 0.12308554351329803,
+    "predicted": "elephant",
+    "predicted_prob": 0.38758140802383423,
+    "entropy": 0.8523678947939871
+  },
+  {
+    "species": "leopard",
+    "file": "000013.jpg",
+    "reason": "low_conf=0.100",
+    "correct_prob": 0.09960998594760895,
+    "predicted": "wolf",
+    "predicted_prob": 0.6543701887130737,
+    "entropy": 0.6393113815795087
+  },
+  {
+    "species": "leopard",
+    "file": "000018.jpg",
+    "reason": "low_conf=0.048",
+    "correct_prob": 0.04783117026090622,
+    "predicted": "elephant",
+    "predicted_prob": 0.9200157523155212,
+    "entropy": 0.22384355541842008
+  },
+  {
+    "species": "leopard",
+    "file": "000019.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.04186221957206726,
+    "predicted": "elephant",
+    "predicted_prob": 0.8787673115730286,
+    "entropy": 0.31085486158699444
+  },
+  {
+    "species": "leopard",
+    "file": "000022.jpg",
+    "reason": "low_conf=0.129",
+    "correct_prob": 0.12916673719882965,
+    "predicted": "deer",
+    "predicted_prob": 0.30765199661254883,
+    "entropy": 0.9539156106881954
+  },
+  {
+    "species": "leopard",
+    "file": "000025.jpg",
+    "reason": "no_signal(entropy=0.904)",
+    "correct_prob": 0.370411217212677,
+    "predicted": "leopard",
+    "predicted_prob": 0.370411217212677,
+    "entropy": 0.9038027435700834
+  },
+  {
+    "species": "leopard",
+    "file": "000026.jpg",
+    "reason": "low_conf=0.107",
+    "correct_prob": 0.1069614514708519,
+    "predicted": "wolf",
+    "predicted_prob": 0.5973501801490784,
+    "entropy": 0.7435147636752727
+  },
+  {
+    "species": "leopard",
+    "file": "000028.jpg",
+    "reason": "low_conf=0.080",
+    "correct_prob": 0.07987698167562485,
+    "predicted": "elephant",
+    "predicted_prob": 0.8741656541824341,
+    "entropy": 0.30824917337309693
+  },
+  {
+    "species": "leopard",
+    "file": "000034.jpg",
+    "reason": "low_conf=0.088",
+    "correct_prob": 0.08820074051618576,
+    "predicted": "deer",
+    "predicted_prob": 0.6935811042785645,
+    "entropy": 0.6354095062007015
+  },
+  {
+    "species": "leopard",
+    "file": "000036.jpg",
+    "reason": "low_conf=0.062",
+    "correct_prob": 0.06158488988876343,
+    "predicted": "wolf",
+    "predicted_prob": 0.657132089138031,
+    "entropy": 0.65249645984707
+  },
+  {
+    "species": "leopard",
+    "file": "000037.jpg",
+    "reason": "low_conf=0.053",
+    "correct_prob": 0.05269642919301987,
+    "predicted": "elephant",
+    "predicted_prob": 0.9123325943946838,
+    "entropy": 0.23654209362458045
+  },
+  {
+    "species": "leopard",
+    "file": "000039.jpg",
+    "reason": "low_conf=0.036",
+    "correct_prob": 0.03648027405142784,
+    "predicted": "deer",
+    "predicted_prob": 0.6065475940704346,
+    "entropy": 0.7317622519276057
+  },
+  {
+    "species": "leopard",
+    "file": "000040.jpg",
+    "reason": "low_conf=0.108",
+    "correct_prob": 0.10846886038780212,
+    "predicted": "wolf",
+    "predicted_prob": 0.7063626646995544,
+    "entropy": 0.6074456832966193
+  },
+  {
+    "species": "leopard",
+    "file": "000041.jpg",
+    "reason": "low_conf=0.093",
+    "correct_prob": 0.09289740025997162,
+    "predicted": "elephant",
+    "predicted_prob": 0.4270764887332916,
+    "entropy": 0.8593931814533602
+  },
+  {
+    "species": "leopard",
+    "file": "000044.jpg",
+    "reason": "low_conf=0.091",
+    "correct_prob": 0.09125158935785294,
+    "predicted": "deer",
+    "predicted_prob": 0.4157794415950775,
+    "entropy": 0.9088983873476879
+  },
+  {
+    "species": "leopard",
+    "file": "000047.jpg",
+    "reason": "low_conf=0.037",
+    "correct_prob": 0.0372275672852993,
+    "predicted": "deer",
+    "predicted_prob": 0.3716922402381897,
+    "entropy": 0.8783022299443284
+  },
+  {
+    "species": "leopard",
+    "file": "000048.jpg",
+    "reason": "no_signal(entropy=0.903)",
+    "correct_prob": 0.15128472447395325,
+    "predicted": "tiger",
+    "predicted_prob": 0.3884325623512268,
+    "entropy": 0.9029111762674636
+  },
+  {
+    "species": "leopard",
+    "file": "000049.jpg",
+    "reason": "low_conf=0.040",
+    "correct_prob": 0.04001712426543236,
+    "predicted": "elephant",
+    "predicted_prob": 0.6813079714775085,
+    "entropy": 0.6328654618256014
+  },
+  {
+    "species": "leopard",
+    "file": "000053.jpg",
+    "reason": "no_signal(entropy=0.950)",
+    "correct_prob": 0.16600628197193146,
+    "predicted": "tiger",
+    "predicted_prob": 0.36994078755378723,
+    "entropy": 0.9495045116485498
+  },
+  {
+    "species": "leopard",
+    "file": "000057.jpg",
+    "reason": "no_signal(entropy=0.992)",
+    "correct_prob": 0.2347727119922638,
+    "predicted": "tiger",
+    "predicted_prob": 0.2436681091785431,
+    "entropy": 0.9916640829077771
+  },
+  {
+    "species": "leopard",
+    "file": "000062.jpg",
+    "reason": "no_signal(entropy=0.961)",
+    "correct_prob": 0.24519482254981995,
+    "predicted": "tiger",
+    "predicted_prob": 0.29143649339675903,
+    "entropy": 0.9608882343624258
+  },
+  {
+    "species": "leopard",
+    "file": "000063.jpg",
+    "reason": "low_conf=0.044",
+    "correct_prob": 0.044241804629564285,
+    "predicted": "deer",
+    "predicted_prob": 0.5889180898666382,
+    "entropy": 0.7326142664396963
+  },
+  {
+    "species": "leopard",
+    "file": "000064.jpg",
+    "reason": "low_conf=0.149",
+    "correct_prob": 0.14924156665802002,
+    "predicted": "tiger",
+    "predicted_prob": 0.44917118549346924,
+    "entropy": 0.8807788716239574
+  },
+  {
+    "species": "leopard",
+    "file": "000071.jpg",
+    "reason": "no_signal(entropy=0.904)",
+    "correct_prob": 0.2655027508735657,
+    "predicted": "tiger",
+    "predicted_prob": 0.3079446852207184,
+    "entropy": 0.9038119281132025
+  },
+  {
+    "species": "leopard",
+    "file": "000082.jpg",
+    "reason": "no_signal(entropy=0.916)",
+    "correct_prob": 0.3657095730304718,
+    "predicted": "leopard",
+    "predicted_prob": 0.3657095730304718,
+    "entropy": 0.9162726125766913
+  },
+  {
+    "species": "leopard",
+    "file": "000086.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.042311061173677444,
+    "predicted": "tiger",
+    "predicted_prob": 0.8774905800819397,
+    "entropy": 0.3175005081192945
+  },
+  {
+    "species": "leopard",
+    "file": "000089.jpg",
+    "reason": "low_conf=0.062",
+    "correct_prob": 0.06198014318943024,
+    "predicted": "tiger",
+    "predicted_prob": 0.711226224899292,
+    "entropy": 0.5887893578792192
+  },
+  {
+    "species": "leopard",
+    "file": "000107.jpg",
+    "reason": "no_signal(entropy=0.957)",
+    "correct_prob": 0.2861122488975525,
+    "predicted": "deer",
+    "predicted_prob": 0.29448428750038147,
+    "entropy": 0.9573433710629262
+  },
+  {
+    "species": "leopard",
+    "file": "000142.jpg",
+    "reason": "low_conf=0.124",
+    "correct_prob": 0.12439831346273422,
+    "predicted": "elephant",
+    "predicted_prob": 0.4087457060813904,
+    "entropy": 0.8603034881866988
+  },
+  {
+    "species": "leopard",
+    "file": "000144.jpg",
+    "reason": "low_conf=0.112",
+    "correct_prob": 0.11160678416490555,
+    "predicted": "tiger",
+    "predicted_prob": 0.39934805035591125,
+    "entropy": 0.9269009806879158
+  },
+  {
+    "species": "leopard",
+    "file": "000145.jpg",
+    "reason": "no_signal(entropy=0.938)",
+    "correct_prob": 0.17302259802818298,
+    "predicted": "wolf",
+    "predicted_prob": 0.36991724371910095,
+    "entropy": 0.9378270316926542
+  },
+  {
+    "species": "leopard",
+    "file": "000154.jpg",
+    "reason": "no_signal(entropy=0.931)",
+    "correct_prob": 0.34733107686042786,
+    "predicted": "leopard",
+    "predicted_prob": 0.34733107686042786,
+    "entropy": 0.9305325786647741
+  },
+  {
+    "species": "leopard",
+    "file": "000156.jpg",
+    "reason": "no_signal(entropy=0.973)",
+    "correct_prob": 0.22786666452884674,
+    "predicted": "tiger",
+    "predicted_prob": 0.2975635826587677,
+    "entropy": 0.9726260804686606
+  },
+  {
+    "species": "leopard",
+    "file": "000157.jpg",
+    "reason": "low_conf=0.128",
+    "correct_prob": 0.1275252103805542,
+    "predicted": "wolf",
+    "predicted_prob": 0.3228972852230072,
+    "entropy": 0.9691416573883965
+  },
+  {
+    "species": "leopard",
+    "file": "000162.jpg",
+    "reason": "low_conf=0.079",
+    "correct_prob": 0.07899212092161179,
+    "predicted": "tiger",
+    "predicted_prob": 0.5167370438575745,
+    "entropy": 0.7689466895032189
+  },
+  {
+    "species": "leopard",
+    "file": "000175.jpg",
+    "reason": "no_signal(entropy=0.957)",
+    "correct_prob": 0.17855098843574524,
+    "predicted": "elephant",
+    "predicted_prob": 0.3321167826652527,
+    "entropy": 0.9570189492979121
+  },
+  {
+    "species": "leopard",
+    "file": "000179.jpg",
+    "reason": "low_conf=0.140",
+    "correct_prob": 0.140473872423172,
+    "predicted": "elephant",
+    "predicted_prob": 0.5345837473869324,
+    "entropy": 0.7872673346833944
+  },
+  {
+    "species": "leopard",
+    "file": "000180.jpg",
+    "reason": "low_conf=0.140",
+    "correct_prob": 0.13999447226524353,
+    "predicted": "deer",
+    "predicted_prob": 0.36355623602867126,
+    "entropy": 0.8970479565193477
+  },
+  {
+    "species": "leopard",
+    "file": "000183.jpg",
+    "reason": "low_conf=0.106",
+    "correct_prob": 0.10590828955173492,
+    "predicted": "tiger",
+    "predicted_prob": 0.4171201288700104,
+    "entropy": 0.8892790181429103
+  },
+  {
+    "species": "leopard",
+    "file": "000186.jpg",
+    "reason": "low_conf=0.120",
+    "correct_prob": 0.11989892274141312,
+    "predicted": "elephant",
+    "predicted_prob": 0.30523407459259033,
+    "entropy": 0.9194334286497987
+  },
+  {
+    "species": "leopard",
+    "file": "000189.jpg",
+    "reason": "low_conf=0.119",
+    "correct_prob": 0.1185258999466896,
+    "predicted": "tiger",
+    "predicted_prob": 0.6000913977622986,
+    "entropy": 0.7468111998971794
+  },
+  {
+    "species": "leopard",
+    "file": "000192.jpg",
+    "reason": "no_signal(entropy=0.940)",
+    "correct_prob": 0.16577516496181488,
+    "predicted": "tiger",
+    "predicted_prob": 0.3635566234588623,
+    "entropy": 0.9396586814248535
+  },
+  {
+    "species": "leopard",
+    "file": "000195.jpg",
+    "reason": "no_signal(entropy=0.923)",
+    "correct_prob": 0.2380944788455963,
+    "predicted": "tiger",
+    "predicted_prob": 0.3626861870288849,
+    "entropy": 0.9231206523676446
+  },
+  {
+    "species": "leopard",
+    "file": "000202.jpg",
+    "reason": "low_conf=0.133",
+    "correct_prob": 0.13304594159126282,
+    "predicted": "wolf",
+    "predicted_prob": 0.3544793426990509,
+    "entropy": 0.888273458809159
+  },
+  {
+    "species": "leopard",
+    "file": "000205.jpg",
+    "reason": "no_signal(entropy=0.925)",
+    "correct_prob": 0.2075616717338562,
+    "predicted": "tiger",
+    "predicted_prob": 0.30135366320610046,
+    "entropy": 0.9249400066630876
+  },
+  {
+    "species": "leopard",
+    "file": "000208.jpg",
+    "reason": "low_conf=0.150",
+    "correct_prob": 0.14951549470424652,
+    "predicted": "deer",
+    "predicted_prob": 0.4163373112678528,
+    "entropy": 0.8837352575437682
+  },
+  {
+    "species": "leopard",
+    "file": "000209.jpg",
+    "reason": "low_conf=0.121",
+    "correct_prob": 0.12124548852443695,
+    "predicted": "wolf",
+    "predicted_prob": 0.5853449106216431,
+    "entropy": 0.7578882033122143
+  },
+  {
+    "species": "leopard",
+    "file": "000212.jpg",
+    "reason": "low_conf=0.118",
+    "correct_prob": 0.11839207261800766,
+    "predicted": "tiger",
+    "predicted_prob": 0.6290832161903381,
+    "entropy": 0.6874324620120058
+  },
+  {
+    "species": "leopard",
+    "file": "000214.jpg",
+    "reason": "low_conf=0.103",
+    "correct_prob": 0.10275376588106155,
+    "predicted": "deer",
+    "predicted_prob": 0.558734118938446,
+    "entropy": 0.7804944007531087
+  },
+  {
+    "species": "leopard",
+    "file": "000220.jpg",
+    "reason": "low_conf=0.133",
+    "correct_prob": 0.13318148255348206,
+    "predicted": "wolf",
+    "predicted_prob": 0.8183137774467468,
+    "entropy": 0.3852705482805698
+  },
+  {
+    "species": "leopard",
+    "file": "000223.jpg",
+    "reason": "no_signal(entropy=0.913)",
+    "correct_prob": 0.33399856090545654,
+    "predicted": "leopard",
+    "predicted_prob": 0.33399856090545654,
+    "entropy": 0.913353631449422
+  },
+  {
+    "species": "leopard",
+    "file": "000224.jpg",
+    "reason": "no_signal(entropy=0.927)",
+    "correct_prob": 0.32594773173332214,
+    "predicted": "leopard",
+    "predicted_prob": 0.32594773173332214,
+    "entropy": 0.927124076203035
+  },
+  {
+    "species": "leopard",
+    "file": "000225.jpg",
+    "reason": "no_signal(entropy=0.969)",
+    "correct_prob": 0.18958674371242523,
+    "predicted": "deer",
+    "predicted_prob": 0.3265097737312317,
+    "entropy": 0.9694060092786557
+  },
+  {
+    "species": "leopard",
+    "file": "000228.jpg",
+    "reason": "no_signal(entropy=0.966)",
+    "correct_prob": 0.3195119798183441,
+    "predicted": "leopard",
+    "predicted_prob": 0.3195119798183441,
+    "entropy": 0.965972249323339
+  },
+  {
+    "species": "leopard",
+    "file": "000229.jpg",
+    "reason": "low_conf=0.098",
+    "correct_prob": 0.09830552339553833,
+    "predicted": "elephant",
+    "predicted_prob": 0.4708622992038727,
+    "entropy": 0.8438173073567752
+  },
+  {
+    "species": "leopard",
+    "file": "000233.jpg",
+    "reason": "low_conf=0.068",
+    "correct_prob": 0.06779748201370239,
+    "predicted": "elephant",
+    "predicted_prob": 0.558786928653717,
+    "entropy": 0.7735932535636361
+  },
+  {
+    "species": "leopard",
+    "file": "000236.jpg",
+    "reason": "low_conf=0.068",
+    "correct_prob": 0.06776650249958038,
+    "predicted": "tiger",
+    "predicted_prob": 0.4790157377719879,
+    "entropy": 0.7890819485694855
+  },
+  {
+    "species": "leopard",
+    "file": "000237.jpg",
+    "reason": "no_signal(entropy=0.985)",
+    "correct_prob": 0.21745014190673828,
+    "predicted": "wolf",
+    "predicted_prob": 0.27534887194633484,
+    "entropy": 0.9850122516226508
+  },
+  {
+    "species": "leopard",
+    "file": "000239.jpg",
+    "reason": "low_conf=0.125",
+    "correct_prob": 0.12518948316574097,
+    "predicted": "wolf",
+    "predicted_prob": 0.5574496984481812,
+    "entropy": 0.7711140935415388
+  },
+  {
+    "species": "leopard",
+    "file": "000240.jpg",
+    "reason": "low_conf=0.148",
+    "correct_prob": 0.14803732931613922,
+    "predicted": "wolf",
+    "predicted_prob": 0.3561820685863495,
+    "entropy": 0.9573150026757115
+  },
+  {
+    "species": "leopard",
+    "file": "000241.jpg",
+    "reason": "low_conf=0.094",
+    "correct_prob": 0.09374839067459106,
+    "predicted": "wolf",
+    "predicted_prob": 0.5365577936172485,
+    "entropy": 0.782712986398649
+  },
+  {
+    "species": "leopard",
+    "file": "000242.jpg",
+    "reason": "no_signal(entropy=0.908)",
+    "correct_prob": 0.21524029970169067,
+    "predicted": "deer",
+    "predicted_prob": 0.3576087951660156,
+    "entropy": 0.9075336679366413
+  },
+  {
+    "species": "leopard",
+    "file": "000243.jpg",
+    "reason": "no_signal(entropy=0.910)",
+    "correct_prob": 0.36927473545074463,
+    "predicted": "leopard",
+    "predicted_prob": 0.36927473545074463,
+    "entropy": 0.910372136173826
+  },
+  {
+    "species": "leopard",
+    "file": "000244.jpg",
+    "reason": "low_conf=0.138",
+    "correct_prob": 0.13830015063285828,
+    "predicted": "wolf",
+    "predicted_prob": 0.37422630190849304,
+    "entropy": 0.8624432645267652
+  },
+  {
+    "species": "leopard",
+    "file": "000245.jpg",
+    "reason": "no_signal(entropy=0.945)",
+    "correct_prob": 0.3454907536506653,
+    "predicted": "leopard",
+    "predicted_prob": 0.3454907536506653,
+    "entropy": 0.944739733629922
+  },
+  {
+    "species": "leopard",
+    "file": "000254.jpg",
+    "reason": "no_signal(entropy=0.903)",
+    "correct_prob": 0.2324904352426529,
+    "predicted": "wolf",
+    "predicted_prob": 0.309180349111557,
+    "entropy": 0.9028988808307075
+  },
+  {
+    "species": "leopard",
+    "file": "000262.jpg",
+    "reason": "mislabeled\u2192elephant(0.710)",
+    "correct_prob": 0.1895773708820343,
+    "predicted": "elephant",
+    "predicted_prob": 0.7103864550590515,
+    "entropy": 0.5452846213975215
+  },
+  {
+    "species": "leopard",
+    "file": "000268.jpg",
+    "reason": "low_conf=0.111",
+    "correct_prob": 0.11054351925849915,
+    "predicted": "tiger",
+    "predicted_prob": 0.6830431818962097,
+    "entropy": 0.5956563222731316
+  },
+  {
+    "species": "leopard",
+    "file": "000276.jpg",
+    "reason": "no_signal(entropy=0.920)",
+    "correct_prob": 0.2750144302845001,
+    "predicted": "wolf",
+    "predicted_prob": 0.32291179895401,
+    "entropy": 0.9199455409975857
+  },
+  {
+    "species": "leopard",
+    "file": "000280.jpg",
+    "reason": "no_signal(entropy=0.906)",
+    "correct_prob": 0.241216778755188,
+    "predicted": "deer",
+    "predicted_prob": 0.3330555558204651,
+    "entropy": 0.9061793181710517
+  },
+  {
+    "species": "leopard",
+    "file": "000301.jpg",
+    "reason": "no_signal(entropy=0.965)",
+    "correct_prob": 0.3064540922641754,
+    "predicted": "leopard",
+    "predicted_prob": 0.3064540922641754,
+    "entropy": 0.9653004444355131
+  },
+  {
+    "species": "leopard",
+    "file": "000306.jpg",
+    "reason": "no_signal(entropy=0.906)",
+    "correct_prob": 0.23731917142868042,
+    "predicted": "tiger",
+    "predicted_prob": 0.3896859884262085,
+    "entropy": 0.905912225731636
+  },
+  {
+    "species": "leopard",
+    "file": "000310.jpg",
+    "reason": "low_conf=0.077",
+    "correct_prob": 0.07665424793958664,
+    "predicted": "elephant",
+    "predicted_prob": 0.7411177158355713,
+    "entropy": 0.5629854950893968
+  },
+  {
+    "species": "leopard",
+    "file": "000313.jpg",
+    "reason": "no_signal(entropy=0.935)",
+    "correct_prob": 0.27981653809547424,
+    "predicted": "wolf",
+    "predicted_prob": 0.3189670741558075,
+    "entropy": 0.9346016275421286
+  },
+  {
+    "species": "leopard",
+    "file": "000320.jpg",
+    "reason": "low_conf=0.084",
+    "correct_prob": 0.08379413187503815,
+    "predicted": "tiger",
+    "predicted_prob": 0.5280307531356812,
+    "entropy": 0.7445042500585656
+  },
+  {
+    "species": "leopard",
+    "file": "000323.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.042044296860694885,
+    "predicted": "tiger",
+    "predicted_prob": 0.4997096657752991,
+    "entropy": 0.7824650778033289
+  },
+  {
+    "species": "leopard",
+    "file": "000331.jpg",
+    "reason": "no_signal(entropy=0.929)",
+    "correct_prob": 0.19185058772563934,
+    "predicted": "deer",
+    "predicted_prob": 0.347411185503006,
+    "entropy": 0.9291313432879394
+  },
+  {
+    "species": "leopard",
+    "file": "000332.jpg",
+    "reason": "low_conf=0.146",
+    "correct_prob": 0.14598974585533142,
+    "predicted": "tiger",
+    "predicted_prob": 0.252888947725296,
+    "entropy": 0.9860432906566681
+  },
+  {
+    "species": "leopard",
+    "file": "000333.jpg",
+    "reason": "low_conf=0.130",
+    "correct_prob": 0.13024628162384033,
+    "predicted": "tiger",
+    "predicted_prob": 0.5546189546585083,
+    "entropy": 0.6805760524357908
+  },
+  {
+    "species": "leopard",
+    "file": "000338.jpg",
+    "reason": "low_conf=0.029",
+    "correct_prob": 0.029108883813023567,
+    "predicted": "wolf",
+    "predicted_prob": 0.5142812132835388,
+    "entropy": 0.754237199284572
+  },
+  {
+    "species": "leopard",
+    "file": "000345.jpg",
+    "reason": "no_signal(entropy=0.905)",
+    "correct_prob": 0.35570061206817627,
+    "predicted": "leopard",
+    "predicted_prob": 0.35570061206817627,
+    "entropy": 0.9054572945716551
+  },
+  {
+    "species": "leopard",
+    "file": "000355.jpg",
+    "reason": "no_signal(entropy=0.918)",
+    "correct_prob": 0.2143506407737732,
+    "predicted": "tiger",
+    "predicted_prob": 0.3924486041069031,
+    "entropy": 0.9182762502856857
+  },
+  {
+    "species": "leopard",
+    "file": "000358.jpg",
+    "reason": "no_signal(entropy=0.930)",
+    "correct_prob": 0.3032744228839874,
+    "predicted": "tiger",
+    "predicted_prob": 0.3165621757507324,
+    "entropy": 0.929800481695505
+  },
+  {
+    "species": "leopard",
+    "file": "000359.jpg",
+    "reason": "low_conf=0.139",
+    "correct_prob": 0.1391945779323578,
+    "predicted": "tiger",
+    "predicted_prob": 0.28954389691352844,
+    "entropy": 0.9761622036384178
+  },
+  {
+    "species": "leopard",
+    "file": "000392.jpg",
+    "reason": "low_conf=0.067",
+    "correct_prob": 0.06690017133951187,
+    "predicted": "tiger",
+    "predicted_prob": 0.6032107472419739,
+    "entropy": 0.7068811024112223
+  },
+  {
+    "species": "leopard",
+    "file": "000405.jpg",
+    "reason": "low_conf=0.123",
+    "correct_prob": 0.12315797060728073,
+    "predicted": "tiger",
+    "predicted_prob": 0.697600781917572,
+    "entropy": 0.6160965600191805
+  },
+  {
+    "species": "leopard",
+    "file": "000409.jpg",
+    "reason": "low_conf=0.102",
+    "correct_prob": 0.10227014124393463,
+    "predicted": "wolf",
+    "predicted_prob": 0.4445074796676636,
+    "entropy": 0.8800735135261882
+  },
+  {
+    "species": "tiger",
+    "file": "000001.jpg",
+    "reason": "low_conf=0.044",
+    "correct_prob": 0.0436704196035862,
+    "predicted": "leopard",
+    "predicted_prob": 0.5331197381019592,
+    "entropy": 0.6363754386750275
+  },
+  {
+    "species": "tiger",
+    "file": "000002.jpg",
+    "reason": "low_conf=0.048",
+    "correct_prob": 0.047614481300115585,
+    "predicted": "elephant",
+    "predicted_prob": 0.6338123083114624,
+    "entropy": 0.6462604513447723
+  },
+  {
+    "species": "tiger",
+    "file": "000005.jpg",
+    "reason": "no_signal(entropy=0.929)",
+    "correct_prob": 0.1645147055387497,
+    "predicted": "elephant",
+    "predicted_prob": 0.35455313324928284,
+    "entropy": 0.9285493099022133
+  },
+  {
+    "species": "tiger",
+    "file": "000010.jpg",
+    "reason": "low_conf=0.041",
+    "correct_prob": 0.04085295647382736,
+    "predicted": "wolf",
+    "predicted_prob": 0.42711514234542847,
+    "entropy": 0.8397493695128625
+  },
+  {
+    "species": "tiger",
+    "file": "000018.jpg",
+    "reason": "low_conf=0.042",
+    "correct_prob": 0.041607074439525604,
+    "predicted": "wolf",
+    "predicted_prob": 0.6626291275024414,
+    "entropy": 0.584173754617381
+  },
+  {
+    "species": "tiger",
+    "file": "000020.jpg",
+    "reason": "low_conf=0.040",
+    "correct_prob": 0.04018335044384003,
+    "predicted": "wolf",
+    "predicted_prob": 0.5815283060073853,
+    "entropy": 0.6750102193056043
+  },
+  {
+    "species": "tiger",
+    "file": "000022.jpg",
+    "reason": "no_signal(entropy=0.955)",
+    "correct_prob": 0.18438482284545898,
+    "predicted": "deer",
+    "predicted_prob": 0.35157811641693115,
+    "entropy": 0.9550089416638512
+  },
+  {
+    "species": "tiger",
+    "file": "000025.jpg",
+    "reason": "low_conf=0.064",
+    "correct_prob": 0.06404434889554977,
+    "predicted": "deer",
+    "predicted_prob": 0.6935811042785645,
+    "entropy": 0.6354095062007015
+  },
+  {
+    "species": "tiger",
+    "file": "000029.jpg",
+    "reason": "low_conf=0.052",
+    "correct_prob": 0.05238549783825874,
+    "predicted": "wolf",
+    "predicted_prob": 0.5235345959663391,
+    "entropy": 0.7737014682208702
+  },
+  {
+    "species": "tiger",
+    "file": "000032.jpg",
+    "reason": "low_conf=0.012",
+    "correct_prob": 0.012369531206786633,
+    "predicted": "elephant",
+    "predicted_prob": 0.9642791748046875,
+    "entropy": 0.1208389969236136
+  },
+  {
+    "species": "tiger",
+    "file": "000034.jpg",
+    "reason": "low_conf=0.146",
+    "correct_prob": 0.1455046683549881,
+    "predicted": "wolf",
+    "predicted_prob": 0.362507700920105,
+    "entropy": 0.9238829694465315
+  },
+  {
+    "species": "tiger",
+    "file": "000043.jpg",
+    "reason": "low_conf=0.074",
+    "correct_prob": 0.07363778352737427,
+    "predicted": "leopard",
+    "predicted_prob": 0.4531894326210022,
+    "entropy": 0.7792738194139154
+  },
+  {
+    "species": "tiger",
+    "file": "000046.jpg",
+    "reason": "no_signal(entropy=0.901)",
+    "correct_prob": 0.33712416887283325,
+    "predicted": "tiger",
+    "predicted_prob": 0.33712416887283325,
+    "entropy": 0.9011767049269764
+  },
+  {
+    "species": "tiger",
+    "file": "000051.jpg",
+    "reason": "no_signal(entropy=0.920)",
+    "correct_prob": 0.3206577003002167,
+    "predicted": "tiger",
+    "predicted_prob": 0.3206577003002167,
+    "entropy": 0.9202213735667438
+  },
+  {
+    "species": "tiger",
+    "file": "000052.jpg",
+    "reason": "low_conf=0.101",
+    "correct_prob": 0.1012997180223465,
+    "predicted": "elephant",
+    "predicted_prob": 0.41977521777153015,
+    "entropy": 0.8862121214300857
+  },
+  {
+    "species": "tiger",
+    "file": "000054.jpg",
+    "reason": "low_conf=0.009",
+    "correct_prob": 0.009179885499179363,
+    "predicted": "leopard",
+    "predicted_prob": 0.9326947331428528,
+    "entropy": 0.2050765710702138
+  },
+  {
+    "species": "tiger",
+    "file": "000055.jpg",
+    "reason": "low_conf=0.105",
+    "correct_prob": 0.10455423593521118,
+    "predicted": "wolf",
+    "predicted_prob": 0.49916741251945496,
+    "entropy": 0.7759108693232913
+  },
+  {
+    "species": "tiger",
+    "file": "000056.jpg",
+    "reason": "low_conf=0.066",
+    "correct_prob": 0.06622419506311417,
+    "predicted": "elephant",
+    "predicted_prob": 0.5220914483070374,
+    "entropy": 0.8164417396256933
+  },
+  {
+    "species": "tiger",
+    "file": "000059.jpg",
+    "reason": "no_signal(entropy=0.903)",
+    "correct_prob": 0.3884325623512268,
+    "predicted": "tiger",
+    "predicted_prob": 0.3884325623512268,
+    "entropy": 0.9029111762674636
+  },
+  {
+    "species": "tiger",
+    "file": "000061.jpg",
+    "reason": "low_conf=0.140",
+    "correct_prob": 0.13991986215114594,
+    "predicted": "wolf",
+    "predicted_prob": 0.4267014265060425,
+    "entropy": 0.9074647097943517
+  },
+  {
+    "species": "tiger",
+    "file": "000075.jpg",
+    "reason": "low_conf=0.148",
+    "correct_prob": 0.14806625247001648,
+    "predicted": "leopard",
+    "predicted_prob": 0.4874535799026489,
+    "entropy": 0.8441289152027601
+  },
+  {
+    "species": "tiger",
+    "file": "000078.jpg",
+    "reason": "low_conf=0.114",
+    "correct_prob": 0.1136869341135025,
+    "predicted": "leopard",
+    "predicted_prob": 0.3657095730304718,
+    "entropy": 0.9162726125766913
+  },
+  {
+    "species": "tiger",
+    "file": "000080.jpg",
+    "reason": "no_signal(entropy=0.928)",
+    "correct_prob": 0.31921637058258057,
+    "predicted": "tiger",
+    "predicted_prob": 0.31921637058258057,
+    "entropy": 0.9283276216961204
+  },
+  {
+    "species": "tiger",
+    "file": "000089.jpg",
+    "reason": "no_signal(entropy=0.904)",
+    "correct_prob": 0.3079446852207184,
+    "predicted": "tiger",
+    "predicted_prob": 0.3079446852207184,
+    "entropy": 0.9038119281132025
+  },
+  {
+    "species": "tiger",
+    "file": "000112.jpg",
+    "reason": "no_signal(entropy=0.961)",
+    "correct_prob": 0.29143649339675903,
+    "predicted": "tiger",
+    "predicted_prob": 0.29143649339675903,
+    "entropy": 0.9608882343624258
+  },
+  {
+    "species": "tiger",
+    "file": "000120.jpg",
+    "reason": "low_conf=0.023",
+    "correct_prob": 0.02346412092447281,
+    "predicted": "deer",
+    "predicted_prob": 0.6173518300056458,
+    "entropy": 0.618334810956641
+  },
+  {
+    "species": "tiger",
+    "file": "000127.jpg",
+    "reason": "no_signal(entropy=0.908)",
+    "correct_prob": 0.42642053961753845,
+    "predicted": "tiger",
+    "predicted_prob": 0.42642053961753845,
+    "entropy": 0.9083400560087207
+  },
+  {
+    "species": "tiger",
+    "file": "000128.jpg",
+    "reason": "low_conf=0.123",
+    "correct_prob": 0.12263000011444092,
+    "predicted": "leopard",
+    "predicted_prob": 0.3454907536506653,
+    "entropy": 0.944739733629922
+  },
+  {
+    "species": "tiger",
+    "file": "000136.jpg",
+    "reason": "no_signal(entropy=0.950)",
+    "correct_prob": 0.3224126696586609,
+    "predicted": "tiger",
+    "predicted_prob": 0.3224126696586609,
+    "entropy": 0.9499155199531304
+  },
+  {
+    "species": "tiger",
+    "file": "000137.jpg",
+    "reason": "low_conf=0.132",
+    "correct_prob": 0.1323864459991455,
+    "predicted": "leopard",
+    "predicted_prob": 0.40330514311790466,
+    "entropy": 0.8904570098668336
+  },
+  {
+    "species": "tiger",
+    "file": "000143.jpg",
+    "reason": "no_signal(entropy=0.929)",
+    "correct_prob": 0.24770942330360413,
+    "predicted": "wolf",
+    "predicted_prob": 0.34622836112976074,
+    "entropy": 0.9286775231614004
+  },
+  {
+    "species": "tiger",
+    "file": "000150.jpg",
+    "reason": "no_signal(entropy=0.948)",
+    "correct_prob": 0.2174966186285019,
+    "predicted": "deer",
+    "predicted_prob": 0.35123777389526367,
+    "entropy": 0.9483796273231461
+  },
+  {
+    "species": "tiger",
+    "file": "000151.jpg",
+    "reason": "no_signal(entropy=0.942)",
+    "correct_prob": 0.2599336802959442,
+    "predicted": "elephant",
+    "predicted_prob": 0.2902675271034241,
+    "entropy": 0.9422558331984731
+  },
+  {
+    "species": "tiger",
+    "file": "000152.jpg",
+    "reason": "no_signal(entropy=0.981)",
+    "correct_prob": 0.18076705932617188,
+    "predicted": "elephant",
+    "predicted_prob": 0.29548966884613037,
+    "entropy": 0.9808918730002838
+  },
+  {
+    "species": "tiger",
+    "file": "000155.jpg",
+    "reason": "low_conf=0.044",
+    "correct_prob": 0.04365716502070427,
+    "predicted": "wolf",
+    "predicted_prob": 0.40454554557800293,
+    "entropy": 0.8894044167840448
+  },
+  {
+    "species": "tiger",
+    "file": "000158.jpg",
+    "reason": "no_signal(entropy=0.918)",
+    "correct_prob": 0.41684287786483765,
+    "predicted": "tiger",
+    "predicted_prob": 0.41684287786483765,
+    "entropy": 0.9179152384859874
+  },
+  {
+    "species": "tiger",
+    "file": "000168.jpg",
+    "reason": "no_signal(entropy=0.916)",
+    "correct_prob": 0.41200265288352966,
+    "predicted": "tiger",
+    "predicted_prob": 0.41200265288352966,
+    "entropy": 0.9156138438145829
+  },
+  {
+    "species": "tiger",
+    "file": "000178.jpg",
+    "reason": "low_conf=0.122",
+    "correct_prob": 0.1223868802189827,
+    "predicted": "leopard",
+    "predicted_prob": 0.7041260004043579,
+    "entropy": 0.5954320416556744
+  },
+  {
+    "species": "tiger",
+    "file": "000185.jpg",
+    "reason": "no_signal(entropy=0.944)",
+    "correct_prob": 0.374515563249588,
+    "predicted": "tiger",
+    "predicted_prob": 0.374515563249588,
+    "entropy": 0.9443739814208719
+  },
+  {
+    "species": "tiger",
+    "file": "000187.jpg",
+    "reason": "no_signal(entropy=0.957)",
+    "correct_prob": 0.2277909368276596,
+    "predicted": "elephant",
+    "predicted_prob": 0.3321167826652527,
+    "entropy": 0.9570189492979121
+  },
+  {
+    "species": "tiger",
+    "file": "000188.jpg",
+    "reason": "no_signal(entropy=0.914)",
+    "correct_prob": 0.4059833288192749,
+    "predicted": "tiger",
+    "predicted_prob": 0.4059833288192749,
+    "entropy": 0.9140237327526373
+  },
+  {
+    "species": "tiger",
+    "file": "000191.jpg",
+    "reason": "low_conf=0.039",
+    "correct_prob": 0.03899585083127022,
+    "predicted": "wolf",
+    "predicted_prob": 0.8922938704490662,
+    "entropy": 0.3004104806137368
+  },
+  {
+    "species": "tiger",
+    "file": "000193.jpg",
+    "reason": "no_signal(entropy=0.952)",
+    "correct_prob": 0.161924809217453,
+    "predicted": "leopard",
+    "predicted_prob": 0.2909715175628662,
+    "entropy": 0.9515228149989764
+  },
+  {
+    "species": "tiger",
+    "file": "000199.jpg",
+    "reason": "no_signal(entropy=0.925)",
+    "correct_prob": 0.30135366320610046,
+    "predicted": "tiger",
+    "predicted_prob": 0.30135366320610046,
+    "entropy": 0.9249400066630876
+  },
+  {
+    "species": "tiger",
+    "file": "000201.jpg",
+    "reason": "no_signal(entropy=0.951)",
+    "correct_prob": 0.3538494110107422,
+    "predicted": "tiger",
+    "predicted_prob": 0.3538494110107422,
+    "entropy": 0.9507618311602196
+  },
+  {
+    "species": "tiger",
+    "file": "000208.jpg",
+    "reason": "no_signal(entropy=0.941)",
+    "correct_prob": 0.231401726603508,
+    "predicted": "elephant",
+    "predicted_prob": 0.35708701610565186,
+    "entropy": 0.9411586506402189
+  },
+  {
+    "species": "tiger",
+    "file": "000209.jpg",
+    "reason": "no_signal(entropy=0.956)",
+    "correct_prob": 0.26703861355781555,
+    "predicted": "deer",
+    "predicted_prob": 0.2851461172103882,
+    "entropy": 0.9558094782931371
+  },
+  {
+    "species": "tiger",
+    "file": "000211.jpg",
+    "reason": "no_signal(entropy=0.910)",
+    "correct_prob": 0.42860227823257446,
+    "predicted": "tiger",
+    "predicted_prob": 0.42860227823257446,
+    "entropy": 0.9096964056345056
+  },
+  {
+    "species": "tiger",
+    "file": "000217.jpg",
+    "reason": "low_conf=0.032",
+    "correct_prob": 0.03215808421373367,
+    "predicted": "elephant",
+    "predicted_prob": 0.9588999152183533,
+    "entropy": 0.12375691331050108
+  },
+  {
+    "species": "tiger",
+    "file": "000218.jpg",
+    "reason": "low_conf=0.124",
+    "correct_prob": 0.12437807768583298,
+    "predicted": "wolf",
+    "predicted_prob": 0.40962183475494385,
+    "entropy": 0.8929736487503684
+  },
+  {
+    "species": "tiger",
+    "file": "000220.jpg",
+    "reason": "low_conf=0.063",
+    "correct_prob": 0.0631866306066513,
+    "predicted": "elephant",
+    "predicted_prob": 0.5063542723655701,
+    "entropy": 0.8386298181479794
+  },
+  {
+    "species": "tiger",
+    "file": "000223.jpg",
+    "reason": "low_conf=0.131",
+    "correct_prob": 0.13122986257076263,
+    "predicted": "wolf",
+    "predicted_prob": 0.8140771389007568,
+    "entropy": 0.40434621475336424
+  },
+  {
+    "species": "tiger",
+    "file": "000225.jpg",
+    "reason": "no_signal(entropy=0.913)",
+    "correct_prob": 0.27918896079063416,
+    "predicted": "tiger",
+    "predicted_prob": 0.27918896079063416,
+    "entropy": 0.9125537614402014
+  },
+  {
+    "species": "tiger",
+    "file": "000246.jpg",
+    "reason": "low_conf=0.075",
+    "correct_prob": 0.07486947625875473,
+    "predicted": "elephant",
+    "predicted_prob": 0.6685647368431091,
+    "entropy": 0.6677736140855953
+  },
+  {
+    "species": "tiger",
+    "file": "000254.jpg",
+    "reason": "low_conf=0.008",
+    "correct_prob": 0.00754408398643136,
+    "predicted": "wolf",
+    "predicted_prob": 0.40259626507759094,
+    "entropy": 0.7583895756700637
+  },
+  {
+    "species": "tiger",
+    "file": "000260.jpg",
+    "reason": "low_conf=0.060",
+    "correct_prob": 0.059876203536987305,
+    "predicted": "elephant",
+    "predicted_prob": 0.7103864550590515,
+    "entropy": 0.5452846213975215
+  },
+  {
+    "species": "tiger",
+    "file": "000262.jpg",
+    "reason": "no_signal(entropy=0.999)",
+    "correct_prob": 0.21502771973609924,
+    "predicted": "tiger",
+    "predicted_prob": 0.21502771973609924,
+    "entropy": 0.9992984380999608
+  },
+  {
+    "species": "tiger",
+    "file": "000271.jpg",
+    "reason": "no_signal(entropy=0.939)",
+    "correct_prob": 0.329527348279953,
+    "predicted": "tiger",
+    "predicted_prob": 0.329527348279953,
+    "entropy": 0.9386763056555883
+  },
+  {
+    "species": "tiger",
+    "file": "000273.jpg",
+    "reason": "mislabeled\u2192leopard(0.704)",
+    "correct_prob": 0.2558387517929077,
+    "predicted": "leopard",
+    "predicted_prob": 0.7042701244354248,
+    "entropy": 0.4731472939486568
+  },
+  {
+    "species": "tiger",
+    "file": "000315.jpg",
+    "reason": "no_signal(entropy=0.919)",
+    "correct_prob": 0.24997767806053162,
+    "predicted": "elephant",
+    "predicted_prob": 0.32483842968940735,
+    "entropy": 0.9186746668779256
+  },
+  {
+    "species": "tiger",
+    "file": "000325.jpg",
+    "reason": "low_conf=0.084",
+    "correct_prob": 0.08378218859434128,
+    "predicted": "elephant",
+    "predicted_prob": 0.5870589017868042,
+    "entropy": 0.7623391514179735
+  },
+  {
+    "species": "tiger",
+    "file": "000348.jpg",
+    "reason": "no_signal(entropy=0.907)",
+    "correct_prob": 0.385821133852005,
+    "predicted": "tiger",
+    "predicted_prob": 0.385821133852005,
+    "entropy": 0.9074494516017506
+  },
+  {
+    "species": "tiger",
+    "file": "000405.jpg",
+    "reason": "low_conf=0.059",
+    "correct_prob": 0.05896996334195137,
+    "predicted": "leopard",
+    "predicted_prob": 0.5728083252906799,
+    "entropy": 0.7192455713786486
+  },
+  {
+    "species": "tiger",
+    "file": "000440.jpg",
+    "reason": "low_conf=0.061",
+    "correct_prob": 0.06111247092485428,
+    "predicted": "leopard",
+    "predicted_prob": 0.8754175305366516,
+    "entropy": 0.3247838878472044
+  },
+  {
+    "species": "tiger",
+    "file": "000442.jpg",
+    "reason": "low_conf=0.121",
+    "correct_prob": 0.12103467434644699,
+    "predicted": "elephant",
+    "predicted_prob": 0.7594095468521118,
+    "entropy": 0.5175518934493398
+  },
+  {
+    "species": "tiger",
+    "file": "000446.jpg",
+    "reason": "low_conf=0.149",
+    "correct_prob": 0.14947806298732758,
+    "predicted": "wolf",
+    "predicted_prob": 0.39901185035705566,
+    "entropy": 0.8006419552561317
+  },
+  {
+    "species": "wolf",
+    "file": "000010.jpg",
+    "reason": "no_signal(entropy=0.922)",
+    "correct_prob": 0.24702629446983337,
+    "predicted": "elephant",
+    "predicted_prob": 0.2936093509197235,
+    "entropy": 0.9221087971777229
+  },
+  {
+    "species": "wolf",
+    "file": "000012.jpg",
+    "reason": "low_conf=0.055",
+    "correct_prob": 0.05522960424423218,
+    "predicted": "leopard",
+    "predicted_prob": 0.8559907078742981,
+    "entropy": 0.35636523563788175
+  },
+  {
+    "species": "wolf",
+    "file": "000016.jpg",
+    "reason": "low_conf=0.109",
+    "correct_prob": 0.10944720357656479,
+    "predicted": "deer",
+    "predicted_prob": 0.5125226974487305,
+    "entropy": 0.7658214265002501
+  },
+  {
+    "species": "wolf",
+    "file": "000018.jpg",
+    "reason": "low_conf=0.074",
+    "correct_prob": 0.07443608343601227,
+    "predicted": "tiger",
+    "predicted_prob": 0.45249316096305847,
+    "entropy": 0.8823305409288158
+  },
+  {
+    "species": "wolf",
+    "file": "000020.jpg",
+    "reason": "no_signal(entropy=0.902)",
+    "correct_prob": 0.30723243951797485,
+    "predicted": "wolf",
+    "predicted_prob": 0.30723243951797485,
+    "entropy": 0.9022444821334702
+  },
+  {
+    "species": "wolf",
+    "file": "000023.jpg",
+    "reason": "low_conf=0.091",
+    "correct_prob": 0.09115268290042877,
+    "predicted": "elephant",
+    "predicted_prob": 0.49098050594329834,
+    "entropy": 0.8485971213613157
+  },
+  {
+    "species": "wolf",
+    "file": "000033.jpg",
+    "reason": "no_signal(entropy=0.905)",
+    "correct_prob": 0.31206926703453064,
+    "predicted": "wolf",
+    "predicted_prob": 0.31206926703453064,
+    "entropy": 0.904835782464296
+  },
+  {
+    "species": "wolf",
+    "file": "000034.jpg",
+    "reason": "low_conf=0.067",
+    "correct_prob": 0.06722866743803024,
+    "predicted": "elephant",
+    "predicted_prob": 0.7091514468193054,
+    "entropy": 0.5712637311955685
+  },
+  {
+    "species": "wolf",
+    "file": "000035.jpg",
+    "reason": "low_conf=0.082",
+    "correct_prob": 0.08173386007547379,
+    "predicted": "deer",
+    "predicted_prob": 0.44524484872817993,
+    "entropy": 0.7284042644530218
+  },
+  {
+    "species": "wolf",
+    "file": "000041.jpg",
+    "reason": "no_signal(entropy=0.910)",
+    "correct_prob": 0.22416551411151886,
+    "predicted": "elephant",
+    "predicted_prob": 0.2948217988014221,
+    "entropy": 0.9097443282102965
+  },
+  {
+    "species": "wolf",
+    "file": "000043.jpg",
+    "reason": "low_conf=0.031",
+    "correct_prob": 0.03147066384553909,
+    "predicted": "tiger",
+    "predicted_prob": 0.5244063138961792,
+    "entropy": 0.7115908472400314
+  },
+  {
+    "species": "wolf",
+    "file": "000045.jpg",
+    "reason": "low_conf=0.045",
+    "correct_prob": 0.0448608435690403,
+    "predicted": "deer",
+    "predicted_prob": 0.653856635093689,
+    "entropy": 0.663764783220788
+  },
+  {
+    "species": "wolf",
+    "file": "000047.jpg",
+    "reason": "low_conf=0.131",
+    "correct_prob": 0.13099798560142517,
+    "predicted": "leopard",
+    "predicted_prob": 0.32570385932922363,
+    "entropy": 0.9386537146422712
+  },
+  {
+    "species": "wolf",
+    "file": "000052.jpg",
+    "reason": "no_signal(entropy=0.915)",
+    "correct_prob": 0.15529927611351013,
+    "predicted": "deer",
+    "predicted_prob": 0.408523291349411,
+    "entropy": 0.9146791684144202
+  },
+  {
+    "species": "wolf",
+    "file": "000053.jpg",
+    "reason": "low_conf=0.125",
+    "correct_prob": 0.12511730194091797,
+    "predicted": "leopard",
+    "predicted_prob": 0.6137171387672424,
+    "entropy": 0.7056193387657851
+  },
+  {
+    "species": "wolf",
+    "file": "000056.jpg",
+    "reason": "no_signal(entropy=0.986)",
+    "correct_prob": 0.2166566252708435,
+    "predicted": "elephant",
+    "predicted_prob": 0.2580340802669525,
+    "entropy": 0.9862189080093732
+  },
+  {
+    "species": "wolf",
+    "file": "000090.jpg",
+    "reason": "no_signal(entropy=0.933)",
+    "correct_prob": 0.31833121180534363,
+    "predicted": "wolf",
+    "predicted_prob": 0.31833121180534363,
+    "entropy": 0.9327790142152562
+  },
+  {
+    "species": "wolf",
+    "file": "000111.jpg",
+    "reason": "mislabeled\u2192deer(0.722)",
+    "correct_prob": 0.2453942596912384,
+    "predicted": "deer",
+    "predicted_prob": 0.7218514084815979,
+    "entropy": 0.44783424869898636
+  },
+  {
+    "species": "wolf",
+    "file": "000112.jpg",
+    "reason": "mislabeled\u2192deer(0.700)",
+    "correct_prob": 0.19650399684906006,
+    "predicted": "deer",
+    "predicted_prob": 0.700405478477478,
+    "entropy": 0.56735137506796
+  },
+  {
+    "species": "wolf",
+    "file": "000127.jpg",
+    "reason": "low_conf=0.136",
+    "correct_prob": 0.13620112836360931,
+    "predicted": "elephant",
+    "predicted_prob": 0.6174308657646179,
+    "entropy": 0.6858590164516877
+  },
+  {
+    "species": "wolf",
+    "file": "000140.jpg",
+    "reason": "mislabeled\u2192tiger(0.722)",
+    "correct_prob": 0.1871173083782196,
+    "predicted": "tiger",
+    "predicted_prob": 0.721826434135437,
+    "entropy": 0.5212736332727785
+  },
+  {
+    "species": "wolf",
+    "file": "000146.jpg",
+    "reason": "low_conf=0.109",
+    "correct_prob": 0.10893303900957108,
+    "predicted": "elephant",
+    "predicted_prob": 0.5306386351585388,
+    "entropy": 0.7893918528308598
+  },
+  {
+    "species": "wolf",
+    "file": "000149.jpg",
+    "reason": "no_signal(entropy=0.953)",
+    "correct_prob": 0.16117402911186218,
+    "predicted": "tiger",
+    "predicted_prob": 0.3458738327026367,
+    "entropy": 0.9528287237065022
+  },
+  {
+    "species": "wolf",
+    "file": "000152.jpg",
+    "reason": "low_conf=0.117",
+    "correct_prob": 0.11680838465690613,
+    "predicted": "elephant",
+    "predicted_prob": 0.34701699018478394,
+    "entropy": 0.9349550843144225
+  },
+  {
+    "species": "wolf",
+    "file": "000155.jpg",
+    "reason": "low_conf=0.095",
+    "correct_prob": 0.09537229686975479,
+    "predicted": "elephant",
+    "predicted_prob": 0.4868733584880829,
+    "entropy": 0.8660194589693244
+  },
+  {
+    "species": "wolf",
+    "file": "000159.jpg",
+    "reason": "no_signal(entropy=0.971)",
+    "correct_prob": 0.17149078845977783,
+    "predicted": "tiger",
+    "predicted_prob": 0.3275977373123169,
+    "entropy": 0.9709719738804656
+  },
+  {
+    "species": "wolf",
+    "file": "000160.jpg",
+    "reason": "no_signal(entropy=0.967)",
+    "correct_prob": 0.27340954542160034,
+    "predicted": "wolf",
+    "predicted_prob": 0.27340954542160034,
+    "entropy": 0.9671166878373191
+  },
+  {
+    "species": "wolf",
+    "file": "000161.jpg",
+    "reason": "no_signal(entropy=0.928)",
+    "correct_prob": 0.17749470472335815,
+    "predicted": "deer",
+    "predicted_prob": 0.3147621750831604,
+    "entropy": 0.9284133194089335
+  },
+  {
+    "species": "wolf",
+    "file": "000168.jpg",
+    "reason": "no_signal(entropy=0.939)",
+    "correct_prob": 0.18627440929412842,
+    "predicted": "tiger",
+    "predicted_prob": 0.3089926242828369,
+    "entropy": 0.9391525686576524
+  },
+  {
+    "species": "wolf",
+    "file": "000172.jpg",
+    "reason": "low_conf=0.148",
+    "correct_prob": 0.1483403891324997,
+    "predicted": "tiger",
+    "predicted_prob": 0.5983244180679321,
+    "entropy": 0.7505333100650987
+  },
+  {
+    "species": "wolf",
+    "file": "000173.jpg",
+    "reason": "no_signal(entropy=0.930)",
+    "correct_prob": 0.2649119198322296,
+    "predicted": "deer",
+    "predicted_prob": 0.3292531371116638,
+    "entropy": 0.9297029329593124
+  },
+  {
+    "species": "wolf",
+    "file": "000177.jpg",
+    "reason": "no_signal(entropy=0.915)",
+    "correct_prob": 0.2890723645687103,
+    "predicted": "tiger",
+    "predicted_prob": 0.36471429467201233,
+    "entropy": 0.9145416965432179
+  },
+  {
+    "species": "wolf",
+    "file": "000179.jpg",
+    "reason": "low_conf=0.100",
+    "correct_prob": 0.10038452595472336,
+    "predicted": "tiger",
+    "predicted_prob": 0.4000054895877838,
+    "entropy": 0.8483878026608751
+  },
+  {
+    "species": "wolf",
+    "file": "000180.jpg",
+    "reason": "low_conf=0.060",
+    "correct_prob": 0.06006116792559624,
+    "predicted": "tiger",
+    "predicted_prob": 0.6246643662452698,
+    "entropy": 0.7186008016379073
+  },
+  {
+    "species": "wolf",
+    "file": "000181.jpg",
+    "reason": "low_conf=0.071",
+    "correct_prob": 0.07128676027059555,
+    "predicted": "elephant",
+    "predicted_prob": 0.6580023169517517,
+    "entropy": 0.6770306706540183
+  },
+  {
+    "species": "wolf",
+    "file": "000183.jpg",
+    "reason": "low_conf=0.055",
+    "correct_prob": 0.05502481013536453,
+    "predicted": "elephant",
+    "predicted_prob": 0.5140739679336548,
+    "entropy": 0.8135886798159727
+  },
+  {
+    "species": "wolf",
+    "file": "000185.jpg",
+    "reason": "low_conf=0.099",
+    "correct_prob": 0.0993274375796318,
+    "predicted": "leopard",
+    "predicted_prob": 0.4641222655773163,
+    "entropy": 0.8318828083313365
+  },
+  {
+    "species": "wolf",
+    "file": "000186.jpg",
+    "reason": "no_signal(entropy=0.947)",
+    "correct_prob": 0.1677270084619522,
+    "predicted": "elephant",
+    "predicted_prob": 0.36723828315734863,
+    "entropy": 0.9474090285083642
+  },
+  {
+    "species": "wolf",
+    "file": "000189.jpg",
+    "reason": "low_conf=0.135",
+    "correct_prob": 0.13540050387382507,
+    "predicted": "tiger",
+    "predicted_prob": 0.4273381233215332,
+    "entropy": 0.8811397352858634
+  },
+  {
+    "species": "wolf",
+    "file": "000191.jpg",
+    "reason": "low_conf=0.143",
+    "correct_prob": 0.1427551805973053,
+    "predicted": "elephant",
+    "predicted_prob": 0.3437846601009369,
+    "entropy": 0.9564392120479658
+  },
+  {
+    "species": "wolf",
+    "file": "000217.jpg",
+    "reason": "no_signal(entropy=0.924)",
+    "correct_prob": 0.26366719603538513,
+    "predicted": "tiger",
+    "predicted_prob": 0.2970966100692749,
+    "entropy": 0.9238097153082669
+  },
+  {
+    "species": "wolf",
+    "file": "000251.jpg",
+    "reason": "low_conf=0.141",
+    "correct_prob": 0.14116118848323822,
+    "predicted": "tiger",
+    "predicted_prob": 0.41391870379447937,
+    "entropy": 0.9153644538413404
+  },
+  {
+    "species": "wolf",
+    "file": "000264.jpg",
+    "reason": "low_conf=0.139",
+    "correct_prob": 0.1387457549571991,
+    "predicted": "elephant",
+    "predicted_prob": 0.5063542723655701,
+    "entropy": 0.8386298181479794
+  },
+  {
+    "species": "wolf",
+    "file": "000265.jpg",
+    "reason": "low_conf=0.026",
+    "correct_prob": 0.026069534942507744,
+    "predicted": "leopard",
+    "predicted_prob": 0.4202871024608612,
+    "entropy": 0.734073794037779
+  },
+  {
+    "species": "wolf",
+    "file": "000266.jpg",
+    "reason": "no_signal(entropy=0.924)",
+    "correct_prob": 0.2809114158153534,
+    "predicted": "elephant",
+    "predicted_prob": 0.2854250371456146,
+    "entropy": 0.9235046995940368
+  },
+  {
+    "species": "wolf",
+    "file": "000270.jpg",
+    "reason": "no_signal(entropy=0.925)",
+    "correct_prob": 0.22642438113689423,
+    "predicted": "tiger",
+    "predicted_prob": 0.30135366320610046,
+    "entropy": 0.9249400066630876
+  },
+  {
+    "species": "wolf",
+    "file": "000276.jpg",
+    "reason": "low_conf=0.147",
+    "correct_prob": 0.1466277688741684,
+    "predicted": "deer",
+    "predicted_prob": 0.7019542455673218,
+    "entropy": 0.597384164447416
+  },
+  {
+    "species": "wolf",
+    "file": "000278.jpg",
+    "reason": "no_signal(entropy=0.919)",
+    "correct_prob": 0.25656768679618835,
+    "predicted": "elephant",
+    "predicted_prob": 0.30523407459259033,
+    "entropy": 0.9194334286497987
+  },
+  {
+    "species": "wolf",
+    "file": "000279.jpg",
+    "reason": "low_conf=0.149",
+    "correct_prob": 0.14857658743858337,
+    "predicted": "tiger",
+    "predicted_prob": 0.6000913977622986,
+    "entropy": 0.7468111998971794
+  },
+  {
+    "species": "wolf",
+    "file": "000280.jpg",
+    "reason": "no_signal(entropy=0.916)",
+    "correct_prob": 0.413442999124527,
+    "predicted": "wolf",
+    "predicted_prob": 0.413442999124527,
+    "entropy": 0.9162039507099863
+  },
+  {
+    "species": "wolf",
+    "file": "000284.jpg",
+    "reason": "no_signal(entropy=0.940)",
+    "correct_prob": 0.2201378047466278,
+    "predicted": "tiger",
+    "predicted_prob": 0.3635566234588623,
+    "entropy": 0.9396586814248535
+  },
+  {
+    "species": "wolf",
+    "file": "000289.jpg",
+    "reason": "low_conf=0.067",
+    "correct_prob": 0.06738046556711197,
+    "predicted": "tiger",
+    "predicted_prob": 0.5809388160705566,
+    "entropy": 0.6599069047662771
+  },
+  {
+    "species": "wolf",
+    "file": "000300.jpg",
+    "reason": "low_conf=0.125",
+    "correct_prob": 0.12532463669776917,
+    "predicted": "elephant",
+    "predicted_prob": 0.4708622992038727,
+    "entropy": 0.8438173073567752
+  },
+  {
+    "species": "wolf",
+    "file": "000301.jpg",
+    "reason": "no_signal(entropy=0.913)",
+    "correct_prob": 0.3091839551925659,
+    "predicted": "leopard",
+    "predicted_prob": 0.33399856090545654,
+    "entropy": 0.913353631449422
+  },
+  {
+    "species": "wolf",
+    "file": "000307.jpg",
+    "reason": "no_signal(entropy=0.985)",
+    "correct_prob": 0.27534887194633484,
+    "predicted": "wolf",
+    "predicted_prob": 0.27534887194633484,
+    "entropy": 0.9850122516226508
+  },
+  {
+    "species": "wolf",
+    "file": "000315.jpg",
+    "reason": "low_conf=0.075",
+    "correct_prob": 0.07458457350730896,
+    "predicted": "elephant",
+    "predicted_prob": 0.6585739254951477,
+    "entropy": 0.6654569612215897
+  },
+  {
+    "species": "wolf",
+    "file": "000318.jpg",
+    "reason": "low_conf=0.139",
+    "correct_prob": 0.13900204002857208,
+    "predicted": "elephant",
+    "predicted_prob": 0.6400559544563293,
+    "entropy": 0.6268872130818081
+  },
+  {
+    "species": "wolf",
+    "file": "000344.jpg",
+    "reason": "no_signal(entropy=0.931)",
+    "correct_prob": 0.22761616110801697,
+    "predicted": "tiger",
+    "predicted_prob": 0.37787631154060364,
+    "entropy": 0.9305220608815248
+  },
+  {
+    "species": "wolf",
+    "file": "000365.jpg",
+    "reason": "no_signal(entropy=0.905)",
+    "correct_prob": 0.3554990887641907,
+    "predicted": "wolf",
+    "predicted_prob": 0.3554990887641907,
+    "entropy": 0.9053850033290401
+  },
+  {
+    "species": "wolf",
+    "file": "000374.jpg",
+    "reason": "low_conf=0.051",
+    "correct_prob": 0.05092347785830498,
+    "predicted": "tiger",
+    "predicted_prob": 0.47534942626953125,
+    "entropy": 0.7273198217449005
+  },
+  {
+    "species": "wolf",
+    "file": "000375.jpg",
+    "reason": "no_signal(entropy=0.904)",
+    "correct_prob": 0.2846120297908783,
+    "predicted": "deer",
+    "predicted_prob": 0.3698316514492035,
+    "entropy": 0.9043348545198233
+  },
+  {
+    "species": "wolf",
+    "file": "000380.jpg",
+    "reason": "no_signal(entropy=0.913)",
+    "correct_prob": 0.27539828419685364,
+    "predicted": "elephant",
+    "predicted_prob": 0.35133880376815796,
+    "entropy": 0.9129784724905645
+  },
+  {
+    "species": "wolf",
+    "file": "000399.jpg",
+    "reason": "low_conf=0.105",
+    "correct_prob": 0.10522309690713882,
+    "predicted": "tiger",
+    "predicted_prob": 0.575219452381134,
+    "entropy": 0.7507129271381944
+  },
+  {
+    "species": "wolf",
+    "file": "000417.jpg",
+    "reason": "low_conf=0.018",
+    "correct_prob": 0.017667878419160843,
+    "predicted": "elephant",
+    "predicted_prob": 0.8723621964454651,
+    "entropy": 0.3380446274921543
+  },
+  {
+    "species": "wolf",
+    "file": "000418.jpg",
+    "reason": "low_conf=0.057",
+    "correct_prob": 0.056603699922561646,
+    "predicted": "tiger",
+    "predicted_prob": 0.5744724869728088,
+    "entropy": 0.7780779030171306
+  },
+  {
+    "species": "wolf",
+    "file": "000427.jpg",
+    "reason": "low_conf=0.029",
+    "correct_prob": 0.029397128149867058,
+    "predicted": "leopard",
+    "predicted_prob": 0.4759548306465149,
+    "entropy": 0.6511070014247188
+  },
+  {
+    "species": "wolf",
+    "file": "000474.jpg",
+    "reason": "low_conf=0.149",
+    "correct_prob": 0.14873214066028595,
+    "predicted": "elephant",
+    "predicted_prob": 0.3321167826652527,
+    "entropy": 0.9570189492979121
+  },
+  {
+    "species": "wolf",
+    "file": "000489.jpg",
+    "reason": "low_conf=0.096",
+    "correct_prob": 0.09589969366788864,
+    "predicted": "deer",
+    "predicted_prob": 0.3629874587059021,
+    "entropy": 0.9291217143314435
+  }
+]

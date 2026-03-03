@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-03-02T10:11:08.750942",
+  "raw_dataset": {
+    "deer": 293,
+    "elephant": 343,
+    "leopard": 273,
+    "tiger": 286,
+    "wolf": 365
+  },
+  "cleaned_dataset": {
+    "deer": 400,
+    "elephant": 400,
+    "leopard": 400,
+    "tiger": 400,
+    "wolf": 400
+  },
+  "augmented_dataset": {
+    "deer": 201,
+    "elephant": 94,
+    "leopard": 230,
+    "tiger": 190,
+    "wolf": 119
+  },
+  "total_dataset": {
+    "elephant": 494,
+    "tiger": 590,
+    "leopard": 630,
+    "wolf": 519,
+    "deer": 601
+  },
+  "class_balance": {
+    "max_class": "leopard",
+    "min_class": "elephant",
+    "max_count": 630,
+    "min_count": 494,
+    "imbalance_ratio": 1.28,
+    "total_images": 2834
+  },
+  "recommendations": []
+}
