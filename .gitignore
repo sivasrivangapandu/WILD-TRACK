@@ -1,0 +1,23 @@
+# Environment
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Database
+*.db
+
+# Uploads
+uploads/
+
+# Model files (too large for git)
+models/*.h5
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Node
+node_modules/
+dist/

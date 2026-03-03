@@ -1,0 +1,97 @@
+[
+  {
+    "true": "leopard",
+    "predicted": "tiger",
+    "count": 15
+  },
+  {
+    "true": "wolf",
+    "predicted": "tiger",
+    "count": 11
+  },
+  {
+    "true": "leopard",
+    "predicted": "wolf",
+    "count": 10
+  },
+  {
+    "true": "deer",
+    "predicted": "wolf",
+    "count": 9
+  },
+  {
+    "true": "leopard",
+    "predicted": "elephant",
+    "count": 6
+  },
+  {
+    "true": "tiger",
+    "predicted": "wolf",
+    "count": 5
+  },
+  {
+    "true": "deer",
+    "predicted": "tiger",
+    "count": 4
+  },
+  {
+    "true": "elephant",
+    "predicted": "tiger",
+    "count": 4
+  },
+  {
+    "true": "tiger",
+    "predicted": "elephant",
+    "count": 4
+  },
+  {
+    "true": "deer",
+    "predicted": "elephant",
+    "count": 3
+  },
+  {
+    "true": "tiger",
+    "predicted": "deer",
+    "count": 3
+  },
+  {
+    "true": "wolf",
+    "predicted": "deer",
+    "count": 3
+  },
+  {
+    "true": "elephant",
+    "predicted": "deer",
+    "count": 2
+  },
+  {
+    "true": "elephant",
+    "predicted": "wolf",
+    "count": 2
+  },
+  {
+    "true": "leopard",
+    "predicted": "deer",
+    "count": 2
+  },
+  {
+    "true": "tiger",
+    "predicted": "leopard",
+    "count": 2
+  },
+  {
+    "true": "wolf",
+    "predicted": "elephant",
+    "count": 2
+  },
+  {
+    "true": "wolf",
+    "predicted": "leopard",
+    "count": 2
+  },
+  {
+    "true": "deer",
+    "predicted": "leopard",
+    "count": 1
+  }
+]

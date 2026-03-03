@@ -1,0 +1,48 @@
+{
+  "model_name": "WildTrackAI_v4",
+  "version": "4.0_max_accuracy",
+  "class_names": [
+    "deer",
+    "elephant",
+    "leopard",
+    "tiger",
+    "wolf"
+  ],
+  "class_indices": {
+    "deer": 0,
+    "elephant": 1,
+    "leopard": 2,
+    "tiger": 3,
+    "wolf": 4
+  },
+  "num_classes": 5,
+  "img_size": 300,
+  "architecture": "EfficientNetB3 + SE Attention + MixUp/CutMix + SGDR + SWA",
+  "accuracy": 0.775,
+  "precision": 0.7917983027836595,
+  "recall": 0.7749999999999999,
+  "f1_score": 0.7738709288832573,
+  "best_variant": "TTA",
+  "results_standard": {
+    "accuracy": 0.745,
+    "f1": 0.7442434164100067
+  },
+  "results_tta": {
+    "accuracy": 0.775,
+    "f1": 0.7738709288832573
+  },
+  "results_swa": {
+    "accuracy": 0.0,
+    "f1": 0
+  },
+  "training_samples": 1600,
+  "validation_samples": 400,
+  "total_params": 11776276,
+  "backbone": "EfficientNetB3",
+  "loss": "FocalLoss(gamma=2.0, smoothing=0.1)",
+  "augmentation": "MixUp(\u03b1=0.3)+CutMix(\u03b1=1.0)+RandomErase+StrongAug",
+  "optimizer": "AdamW + SGDR (cosine warm restarts)",
+  "phases": "3-phase: frozen\u2192ft80\u2192ft140",
+  "tta_augments": 5,
+  "training_date": "2026-03-02T18:26:23.951207"
+}

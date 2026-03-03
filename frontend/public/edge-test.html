@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WildTrackAI - Edge Compatibility Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        .test-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pass { color: #4ade80; }
+        .fail { color: #f87171; }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge.pass { background: #4ade80; color: black; }
+        .badge.fail { background: #f87171; color: white; }
+        h1 { text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; opacity: 0.8; font-size: 14px; margin-bottom: 30px; }
+        .action-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        #console-output {
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 WildTrackAI Edge Compatibility Test</h1>
+    <p class="subtitle">Running browser compatibility checks...</p>
+
+    <div class="test-card">
+        <h2>Browser Detection</h2>
+        <div id="browser-info"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Feature Detection</h2>
+        <div id="feature-tests"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>API Connectivity</h2>
+        <div id="api-tests"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Recommended Actions</h2>
+        <div id="recommendations"></div>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/" class="action-btn">Try Main App</a>
+            <button class="action-btn" onclick="location.reload()">Rerun Tests</button>
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>Console Output</h2>
+        <div id="console-output">Loading...</div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const consoleOutput = document.getElementById('console-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        let logs = [];
+
+        function addLog(type, ...args) {
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
+            logs.push(`[${type}] ${msg}`);
+            consoleOutput.textContent = logs.join('\n');
+        }
+
+        console.log = function(...args) { originalLog.apply(console, args); addLog('LOG', ...args); };
+        console.error = function(...args) { originalError.apply(console, args); addLog('ERROR', ...args); };
+        console.warn = function(...args) { originalWarn.apply(console, args); addLog('WARN', ...args); };
+
+        // Browser info
+        const browserInfo = document.getElementById('browser-info');
+        const ua = navigator.userAgent;
+        const isEdge = ua.includes('Edge') || ua.includes('Edg/');
+        const isChrome = ua.includes('Chrome') && !isEdge;
+        const browserName = isEdge ? 'Microsoft Edge' : (isChrome ? 'Google Chrome' : 'Other');
+        const browserVersion = ua.match(/(?:Edge|Edg|Chrome)\/(\d+)/)?.[1] || 'Unknown';
+
+        browserInfo.innerHTML = `
+            <div class="test-item">
+                <span><strong>Browser:</strong> ${browserName}</span>
+                <span class="badge ${isEdge ? 'pass' : 'fail'}">${browserVersion}</span>
+            </div>
+            <div class="test-item">
+                <span><strong>User Agent:</strong></span>
+            </div>
+            <div style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px; word-break: break-all; margin-top: 5px;">
+                ${ua}
+            </div>
+        `;
+
+        // Feature tests
+        const features = [
+            { name: 'ES6 Classes', test: () => { class Test {} return true; } },
+            { name: 'Arrow Functions', test: () => { const fn = () => {}; return true; } },
+            { name: 'Promises', test: () => typeof Promise !== 'undefined' },
+            { name: 'Fetch API', test: () => typeof fetch !== 'undefined' },
+            { name: 'LocalStorage', test: () => typeof localStorage !== 'undefined' },
+            { name: 'CSS Variables', test: () => CSS.supports('color', 'var(--test)') },
+            { name: 'Async/Await', test: () => { async function test() {} return true; } },
+            { name: 'Object.entries', test: () => typeof Object.entries === 'function' },
+            { name: 'Array.from', test: () => typeof Array.from === 'function' },
+            { name: 'Template Literals', test: () => { const test = `str`; return true; } },
+        ];
+
+        const featureTests = document.getElementById('feature-tests');
+        let passedFeatures = 0;
+        features.forEach(feature => {
+            try {
+                const passed = feature.test();
+                if (passed) passedFeatures++;
+                featureTests.innerHTML += `
+                    <div class="test-item">
+                        <span>${feature.name}</span>
+                        <span class="badge ${passed ? 'pass' : 'fail'}">${passed ? '✓ PASS' : '✗ FAIL'}</span>
+                    </div>
+                `;
+            } catch (e) {
+                featureTests.innerHTML += `
+                    <div class="test-item">
+                        <span>${feature.name}</span>
+                        <span class="badge fail">✗ FAIL</span>
+                    </div>
+                `;
+                console.error(`Feature test failed: ${feature.name}`, e);
+            }
+        });
+
+        console.log(`Feature tests: ${passedFeatures}/${features.length} passed`);
+
+        // API tests
+        const apiTests = document.getElementById('api-tests');
+        apiTests.innerHTML = '<div class="test-item"><span>Testing backend connection...</span></div>';
+
+        fetch('http://localhost:8000/health')
+            .then(res => res.json())
+            .then(data => {
+                console.log('Backend health:', data);
+                apiTests.innerHTML = `
+                    <div class="test-item">
+                        <span><strong>Backend Health:</strong> ${data.status}</span>
+                        <span class="badge pass">✓ CONNECTED</span>
+                    </div>
+                    <div class="test-item">
+                        <span>Model Loaded: ${data.model_loaded ? 'Yes' : 'No'}</span>
+                        <span>Classes: ${data.classes}</span>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                console.error('Backend connection failed:', err);
+                apiTests.innerHTML = `
+                    <div class="test-item">
+                        <span><strong>Backend Connection</strong></span>
+                        <span class="badge fail">✗ FAILED</span>
+                    </div>
+                    <div style="padding: 10px; background: rgba(239, 68, 68, 0.2); border-radius: 4px; margin-top: 5px;">
+                        Error: ${err.message}<br>
+                        Make sure backend is running on http://localhost:8000
+                    </div>
+                `;
+            });
+
+        // Recommendations
+        const recommendations = document.getElementById('recommendations');
+        const issues = [];
+        
+        if (passedFeatures < features.length) {
+            issues.push('⚠️ Some JavaScript features are not supported. Update Edge to the latest version.');
+        }
+        
+        if (!isEdge) {
+            issues.push('ℹ️ You are not using Microsoft Edge. These results may not reflect Edge behavior.');
+        }
+        
+        if (parseInt(browserVersion) < 90) {
+            issues.push('🔄 Your Edge version is outdated. Update to version 90+ for best compatibility.');
+        }
+
+        if (issues.length === 0) {
+            recommendations.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #4ade80;">
+                    ✓ All compatibility checks passed!<br>
+                    <small>If you're still seeing a blank page, try:</small><br>
+                    <ul style="text-align: left; margin-top: 10px;">
+                        <li>Clear browser cache (Ctrl+Shift+Delete)</li>
+                        <li>Disable browser extensions</li>
+                        <li>Check browser console (F12) for errors</li>
+                        <li>Try incognito/private mode</li>
+                    </ul>
+                </div>
+            `;
+        } else {
+            recommendations.innerHTML = issues.map(issue => 
+                `<div class="test-item"><span>${issue}</span></div>`
+            ).join('');
+        }
+
+        console.log('Compatibility test completed');
+    </script>
+</body>
+</html>
