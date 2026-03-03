@@ -120,27 +120,65 @@ MODEL_URLS = {
     "wildtrack_final.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v1.0-models/wildtrack_final.h5",
 }
 
+model_download_status = {"status": "pending", "downloaded": [], "failed": []}
+
 
 def download_models_if_missing():
     """Download model files from GitHub Release if not present locally."""
     import requests as req
+    from time import sleep
+    
+    global model_download_status
+    model_download_status["status"] = "downloading"
+    
     for filename, url in MODEL_URLS.items():
         filepath = os.path.join(MODELS_DIR, filename)
         if os.path.exists(filepath):
-            print(f"  Model already exists: {filename}")
+            file_size = os.path.getsize(filepath) / (1024 * 1024)
+            print(f"  ✓ Model exists: {filename} ({file_size:.1f} MB)")
+            model_download_status["downloaded"].append(filename)
             continue
-        print(f"  Downloading {filename} from GitHub Release...")
-        try:
-            resp = req.get(url, stream=True, timeout=300, allow_redirects=True)
-            resp.raise_for_status()
-            os.makedirs(MODELS_DIR, exist_ok=True)
-            with open(filepath, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            size_mb = os.path.getsize(filepath) / (1024 * 1024)
-            print(f"  ✅ Downloaded {filename} ({size_mb:.1f} MB)")
-        except Exception as e:
-            print(f"  ❌ Failed to download {filename}: {e}")
+            
+        # Retry logic: try up to 3 times
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                print(f"  Downloading {filename}... (attempt {attempt}/{max_retries})")
+                resp = req.get(url, stream=True, timeout=300, allow_redirects=True)
+                resp.raise_for_status()
+                
+                os.makedirs(MODELS_DIR, exist_ok=True)
+                total_size = int(resp.headers.get('content-length', 0))
+                downloaded = 0
+                
+                with open(filepath, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=65536):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0 and downloaded % (5 * 1024 * 1024) == 0:
+                                progress = (downloaded / total_size) * 100
+                                print(f"    Progress: {progress:.0f}% ({downloaded / (1024*1024):.1f}/{total_size / (1024*1024):.1f} MB)")
+                
+                size_mb = os.path.getsize(filepath) / (1024 * 1024)
+                print(f"  ✅ Downloaded {filename} ({size_mb:.1f} MB)")
+                model_download_status["downloaded"].append(filename)
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                print(f"  ❌ Attempt {attempt} failed: {e}")
+                if attempt < max_retries:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    print(f"  Retrying in {wait_time}s...")
+                    sleep(wait_time)
+                else:
+                    print(f"  ❌ All download attempts failed for {filename}")
+                    model_download_status["failed"].append(filename)
+                    # Clean up partial download
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+    
+    model_download_status["status"] = "completed" if not model_download_status["failed"] else "partial"
 
 
 def load_model():
@@ -750,15 +788,30 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
 
 @app.get("/health")
 async def health_check():
-    """System health check."""
+    """System health check with model download status."""
+    # Determine overall health status
+    is_healthy = model is not None and model_download_status.get("status") != "partial"
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if is_healthy else "degraded",
         "model_loaded": model is not None,
+        "model_download_status": model_download_status,
         "gradcam_available": gradcam is not None,
         "classes": len(class_names),
+        "class_names": class_names if len(class_names) <= 10 else class_names[:10],
         "database": os.path.exists(DB_PATH),
+        "gemini_ai": gemini_model is not None,
+        "ninja_api": bool(NINJA_API_KEY),
         "timestamp": datetime.datetime.utcnow().isoformat(),
     }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe for Render - only returns 200 when model is loaded."""
+    if model is None:
+        raise HTTPException(status_code=503, detail="Service not ready - model still loading")
+    return {"ready": True, "status": "operational"}
 
 
 @app.get("/api/system/status")
@@ -796,8 +849,22 @@ async def predict(
 ):
     """Predict animal species from footprint image with preprocessing robustness."""
     if model is None:
-        raise HTTPException(status_code=503,
-                            detail="Model not loaded. Train the model first.")
+        download_status = model_download_status.get("status", "unknown")
+        if download_status == "downloading":
+            raise HTTPException(
+                status_code=503,
+                detail="Model is still downloading. Please wait a moment and try again."
+            )
+        elif download_status == "partial":
+            raise HTTPException(
+                status_code=503,
+                detail="Model download incomplete. Some model files failed to download."
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail="Model not loaded. Please check server logs or contact support."
+            )
 
     # Read and preprocess (now returns quality metrics and stage1 meta)
     contents = await file.read()
