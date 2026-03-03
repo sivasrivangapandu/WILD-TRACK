@@ -71,6 +71,7 @@ TTA_AUGMENTS = 5            # Number of TTA forward passes
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(BASE_DIR)
 DATASET_DIR = os.path.join(BACKEND_DIR, "dataset_cleaned")
+DATASET_STRICT = os.path.join(BACKEND_DIR, "dataset_strict")
 DATASET_RAW = os.path.join(BACKEND_DIR, "dataset")
 MODELS_DIR = os.path.join(BACKEND_DIR, "models")
 OUTPUTS_DIR = os.path.join(MODELS_DIR, "evaluation")
@@ -690,9 +691,19 @@ def apply_swa(model, snapshot_dir, val_dataset, focal_loss):
 # ============================================
 # DATASET DETECTION
 # ============================================
-def detect_dataset():
+def detect_dataset(preferred_dataset=None):
     """Detect best available dataset."""
-    for dpath in [DATASET_DIR, DATASET_RAW]:
+    candidates = []
+    if preferred_dataset:
+        candidates.append(preferred_dataset)
+    candidates.extend([DATASET_STRICT, DATASET_DIR, DATASET_RAW])
+
+    unique_candidates = []
+    for dpath in candidates:
+        if dpath and dpath not in unique_candidates:
+            unique_candidates.append(dpath)
+
+    for dpath in unique_candidates:
         if os.path.isdir(dpath):
             classes = sorted([
                 d for d in os.listdir(dpath)
@@ -1021,7 +1032,7 @@ def kfold_train(dataset_path, class_names, n_folds=5):
 # ============================================
 # MAIN TRAINING LOOP
 # ============================================
-def train(progressive=False):
+def train(progressive=False, dataset_path=None, target_accuracy=0.80, enforce_target=False):
     """Full training pipeline with all v4 improvements."""
     for d in [MODELS_DIR, OUTPUTS_DIR, LOG_DIR]:
         os.makedirs(d, exist_ok=True)
@@ -1033,7 +1044,7 @@ def train(progressive=False):
     print("  WILDTRACKAI v4 — Maximum Accuracy Pipeline")
     print("=" * 70)
     
-    dataset_path, class_names = detect_dataset()
+    dataset_path, class_names = detect_dataset(dataset_path)
     num_classes = len(class_names)
     
     config_summary = {
@@ -1044,6 +1055,8 @@ def train(progressive=False):
         'optimizer': 'AdamW + SGDR',
         'progressive': progressive,
         'tta': f'{TTA_AUGMENTS} augments',
+        'dataset': dataset_path,
+        'target_accuracy': f'{target_accuracy:.2%}',
     }
     
     print(f"\n  Config:")
@@ -1321,6 +1334,9 @@ def train(progressive=False):
         "phases": "3-phase: frozen→ft80→ft140",
         "tta_augments": TTA_AUGMENTS,
         "training_date": datetime.datetime.now().isoformat(),
+        "dataset_path": dataset_path,
+        "target_accuracy": float(target_accuracy),
+        "target_met": bool(best_report.get('accuracy', 0) >= target_accuracy),
     }
     with open(METADATA_PATH, 'w') as f:
         json.dump(metadata, f, indent=2)
@@ -1330,6 +1346,8 @@ def train(progressive=False):
     print("=" * 70)
     print(f"  Best variant:  {best_variant}")
     print(f"  Accuracy:      {best_report.get('accuracy', 0):.2%}")
+    print(f"  Target (>=):   {target_accuracy:.2%}")
+    print(f"  Target met:    {'YES' if best_report.get('accuracy', 0) >= target_accuracy else 'NO'}")
     print(f"  Precision:     {macro.get('precision', 0):.2%}")
     print(f"  Recall:        {macro.get('recall', 0):.2%}")
     print(f"  F1-Score:      {macro.get('f1-score', 0):.2%}")
@@ -1341,6 +1359,11 @@ def train(progressive=False):
     print(f"  Metadata:      {METADATA_PATH}")
     print(f"  Evaluation:    {OUTPUTS_DIR}/")
     print("=" * 70)
+
+    if enforce_target and best_report.get('accuracy', 0) < target_accuracy:
+        raise RuntimeError(
+            f"Target accuracy not reached: {best_report.get('accuracy', 0):.4f} < {target_accuracy:.4f}"
+        )
     
     return best_model, best_report
 
@@ -1355,6 +1378,9 @@ if __name__ == "__main__":
     parser.add_argument("--progressive", action="store_true", help="Enable progressive resizing")
     parser.add_argument("--kfold", type=int, default=0, help="Run K-fold CV (e.g., --kfold 5)")
     parser.add_argument("--tta", type=int, default=TTA_AUGMENTS, help=f"TTA augments (default: {TTA_AUGMENTS})")
+    parser.add_argument("--dataset", type=str, default=None, help="Dataset path (default: auto-detect strict→cleaned→raw)")
+    parser.add_argument("--target-accuracy", type=float, default=0.80, help="Target validation accuracy (default: 0.80)")
+    parser.add_argument("--enforce-target", action="store_true", help="Fail run if target accuracy is not reached")
     args = parser.parse_args()
     
     if args.epochs:
@@ -1365,7 +1391,12 @@ if __name__ == "__main__":
         TTA_AUGMENTS = args.tta
     
     if args.kfold > 1:
-        dataset_path, class_names = detect_dataset()
+        dataset_path, class_names = detect_dataset(args.dataset)
         kfold_train(dataset_path, class_names, n_folds=args.kfold)
     else:
-        train(progressive=args.progressive)
+        train(
+            progressive=args.progressive,
+            dataset_path=args.dataset,
+            target_accuracy=args.target_accuracy,
+            enforce_target=args.enforce_target,
+        )
