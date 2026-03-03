@@ -35,6 +35,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -46,7 +47,8 @@ export default function Sidebar() {
         key={path}
         to={path}
         end={path === '/'}
-        className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors duration-150 ${isActive
+        onClick={() => setMobileOpen(false)}
+        className={`relative flex items-center gap-3 px-3 py-2.5 sm:py-2 rounded-lg text-sm sm:text-[13px] transition-colors duration-150 ${isActive
           ? 'font-medium'
           : 't-secondary hover:t-primary surface-hover'
           }`}
@@ -66,16 +68,40 @@ export default function Sidebar() {
   };
 
   return (
-    <aside
-      className="fixed top-0 left-0 h-full z-40 w-60 flex flex-col"
-      style={{
-        backgroundColor: 'var(--bg-primary)',
-        backdropFilter: 'blur(20px) saturate(1.4)',
-        borderRight: '1px solid var(--border-primary)',
-      }}
-    >
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setMobileOpen(!mobileOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-lg transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface-2)',
+          border: '1px solid var(--border-primary)',
+        }}
+      >
+        {mobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+      </button>
+
+      {/* Backdrop for mobile */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 h-full z-40 w-72 sm:w-60 flex flex-col transition-transform duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}
+        style={{
+          backgroundColor: 'var(--bg-primary)',
+          backdropFilter: 'blur(20px) saturate(1.4)',
+          borderRight: '1px solid var(--border-primary)',
+        }}
+      >
       {/* ── Brand ── */}
-      <div className="px-4 py-4 flex items-center gap-3">
+      <div className="px-4 py-5 sm:py-4 flex items-center gap-3">
         <motion.div
           className={`w-8 h-8 rounded-lg bg-gradient-to-br ${theme.gradient} flex items-center justify-center flex-shrink-0 animate-logo-breathe`}
           animate={{
@@ -101,7 +127,7 @@ export default function Sidebar() {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`ml-auto p-1.5 rounded-md transition-colors t-tertiary surface-hover`}
+          className={`ml-auto p-1.5 rounded-md transition-colors t-tertiary surface-hover hidden lg:block`}
         >
           {collapsed ? <FiMenu size={15} /> : <FiX size={15} />}
         </button>
@@ -122,13 +148,14 @@ export default function Sidebar() {
         {user && (
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium t-secondary hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm sm:text-xs font-medium t-secondary hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
           >
-            <FiLogOut size={13} />
+            <FiLogOut size={14} className="sm:w-[13px] sm:h-[13px]" />
             {!collapsed && 'Logout'}
           </button>
         )}
       </div>
     </aside>
+    </>
   );
 }

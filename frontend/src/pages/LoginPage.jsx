@@ -100,7 +100,7 @@ export default function LoginPage() {
            style={{ background: `radial-gradient(circle, ${theme.secondary}, transparent)` }} />
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">"
         
         {/* Left Side - Branding */}
         <motion.div

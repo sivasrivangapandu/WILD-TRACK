@@ -36,8 +36,8 @@ export default function Layout({ children }) {
     <div className="min-h-screen transition-colors duration-500" style={{ backgroundColor: theme.bg, color: theme.text }}>
       <AnimatedBackground />
       <Sidebar />
-      <main className="ml-60 min-h-screen transition-all duration-300 relative">
-        <div className="max-w-7xl mx-auto px-8 py-8">
+      <main className="lg:ml-60 min-h-screen transition-all duration-300 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
