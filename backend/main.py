@@ -36,9 +36,9 @@ import cv2
 from PIL import Image
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel
 import uvicorn
 
@@ -786,9 +786,11 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
 # ENDPOINTS
 # ============================================
 
-@app.get("/")
-async def root():
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root(request: Request):
     """Root endpoint for Render base URL checks."""
+    if request.method == "HEAD":
+        return Response(status_code=200)
     return {
         "service": "WildTrackAI API",
         "status": "running",
@@ -801,9 +803,11 @@ async def root():
         }
     }
 
-@app.get("/health")
-async def health_check():
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health_check(request: Request):
     """System health check with model download status."""
+    if request.method == "HEAD":
+        return Response(status_code=200)
     # Determine overall health status
     is_healthy = model is not None and model_download_status.get("status") != "partial"
     
