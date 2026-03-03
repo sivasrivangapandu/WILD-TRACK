@@ -112,10 +112,43 @@ model_metadata = {}
 class_names = []
 gradcam = None
 
+# ============================================
+# MODEL DOWNLOAD (for cloud deployment)
+# ============================================
+MODEL_URLS = {
+    "wildtrack_complete_model.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v1.0-models/wildtrack_complete_model.h5",
+    "wildtrack_final.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v1.0-models/wildtrack_final.h5",
+}
+
+
+def download_models_if_missing():
+    """Download model files from GitHub Release if not present locally."""
+    import requests as req
+    for filename, url in MODEL_URLS.items():
+        filepath = os.path.join(MODELS_DIR, filename)
+        if os.path.exists(filepath):
+            print(f"  Model already exists: {filename}")
+            continue
+        print(f"  Downloading {filename} from GitHub Release...")
+        try:
+            resp = req.get(url, stream=True, timeout=300, allow_redirects=True)
+            resp.raise_for_status()
+            os.makedirs(MODELS_DIR, exist_ok=True)
+            with open(filepath, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            size_mb = os.path.getsize(filepath) / (1024 * 1024)
+            print(f"  ✅ Downloaded {filename} ({size_mb:.1f} MB)")
+        except Exception as e:
+            print(f"  ❌ Failed to download {filename}: {e}")
+
 
 def load_model():
     """Load the trained model and metadata at startup."""
     global model, model_metadata, class_names, gradcam, IMG_SIZE
+
+    # Download models if not present (cloud deployment)
+    download_models_if_missing()
 
     import tensorflow as tf
 
