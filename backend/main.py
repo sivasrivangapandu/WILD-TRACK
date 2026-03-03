@@ -786,6 +786,21 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
 # ENDPOINTS
 # ============================================
 
+@app.get("/")
+async def root():
+    """Root endpoint for Render base URL checks."""
+    return {
+        "service": "WildTrackAI API",
+        "status": "running",
+        "version": "2.0.0",
+        "endpoints": {
+            "health": "/health",
+            "readiness": "/ready",
+            "system_status": "/api/system/status",
+            "docs": "/docs"
+        }
+    }
+
 @app.get("/health")
 async def health_check():
     """System health check with model download status."""
