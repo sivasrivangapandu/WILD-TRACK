@@ -1,23 +1,13 @@
-# Environment
-.env
+# Essential ignores to prevent GitHub upload errors
 .venv/
 venv/
 __pycache__/
 *.pyc
 
-# Database
-*.db
-
-# Uploads
-uploads/
-
-# Model files (too large for git)
+# Models are ignored because GitHub blocks files > 100MB
+*.h5
 models/*.h5
 
 # OS
 Thumbs.db
 .DS_Store
-
-# Node
-node_modules/
-dist/
