@@ -111,6 +111,11 @@ model = None
 model_metadata = {}
 class_names = []
 gradcam = None
+model_load_diagnostics = {
+    "loaded_from": None,
+    "attempted": [],
+    "error": None,
+}
 
 # ============================================
 # MODEL DOWNLOAD (for cloud deployment)
@@ -183,7 +188,7 @@ def download_models_if_missing():
 
 def load_model():
     """Load the trained model and metadata at startup."""
-    global model, model_metadata, class_names, gradcam, IMG_SIZE
+    global model, model_metadata, class_names, gradcam, IMG_SIZE, model_load_diagnostics
 
     # Download models if not present (cloud deployment)
     download_models_if_missing()
@@ -191,37 +196,63 @@ def load_model():
     import tensorflow as tf
 
     # Try new model first, then legacy
-    model_file = None
-    for path in [MODEL_PATH, MODEL_PATH_LEGACY]:
-        if os.path.exists(path):
-            model_file = path
-            break
+    candidate_files = [p for p in [MODEL_PATH, MODEL_PATH_LEGACY] if os.path.exists(p)]
 
-    if model_file is None:
+    if not candidate_files:
         print("WARNING: No trained model found!")
         print(f"  Checked: {MODEL_PATH}")
         print(f"  Checked: {MODEL_PATH_LEGACY}")
         print("  Run training first: python training/train.py")
+        model_load_diagnostics = {
+            "loaded_from": None,
+            "attempted": [],
+            "error": "No trained model file found",
+        }
         return
 
-    print(f"Loading model: {model_file}")
+    # Support FocalLoss from v3/v4 training
+    custom_objects = {}
     try:
-        # Support FocalLoss from v3/v4 training
-        custom_objects = {}
+        from training.train_v4 import FocalLoss
+        custom_objects['FocalLoss'] = FocalLoss
+    except ImportError:
         try:
-            from training.train_v4 import FocalLoss
+            from training.train_v3 import FocalLoss
             custom_objects['FocalLoss'] = FocalLoss
         except ImportError:
-            try:
-                from training.train_v3 import FocalLoss
-                custom_objects['FocalLoss'] = FocalLoss
-            except ImportError:
-                pass
-        model = tf.keras.models.load_model(model_file, compile=False,
-                                            custom_objects=custom_objects)
-        print(f"  Model loaded successfully ({model.count_params():,} params)")
-    except Exception as e:
-        print(f"ERROR loading model: {e}")
+            pass
+
+    model = None
+    model_load_diagnostics = {
+        "loaded_from": None,
+        "attempted": [],
+        "error": None,
+    }
+
+    for model_file in candidate_files:
+        file_size_mb = os.path.getsize(model_file) / (1024 * 1024)
+        model_load_diagnostics["attempted"].append(
+            {
+                "path": model_file,
+                "size_mb": round(file_size_mb, 2),
+            }
+        )
+        print(f"Loading model: {model_file} ({file_size_mb:.1f} MB)")
+        try:
+            model = tf.keras.models.load_model(
+                model_file,
+                compile=False,
+                custom_objects=custom_objects,
+            )
+            model_load_diagnostics["loaded_from"] = model_file
+            print(f"  Model loaded successfully ({model.count_params():,} params)")
+            break
+        except Exception as e:
+            model_load_diagnostics["error"] = f"{type(e).__name__}: {e}"
+            print(f"  ERROR loading {os.path.basename(model_file)}: {e}")
+
+    if model is None:
+        print("ERROR: Failed to load model from all available files")
         return
 
     # Load metadata
@@ -818,6 +849,7 @@ async def health_check(request: Request):
     return {
         "status": "healthy" if is_healthy else "degraded",
         "model_loaded": model is not None,
+        "model_load_diagnostics": model_load_diagnostics,
         "model_download_status": model_download_status,
         "gradcam_available": gradcam is not None,
         "classes": len(class_names),
@@ -847,7 +879,7 @@ async def system_status():
     return {
         "model_version": model_metadata.get("version", "unknown"),
         "model_name": model_metadata.get("model_name", "WildTrackAI"),
-        "architecture": model_metadata.get("architecture", "unknown"),
+        "architecture": model_metadata.get("architecture") or model_metadata.get("backbone", "unknown"),
         "validation_accuracy": model_metadata.get("accuracy", 0),
         "precision": model_metadata.get("precision", 0),
         "recall": model_metadata.get("recall", 0),
