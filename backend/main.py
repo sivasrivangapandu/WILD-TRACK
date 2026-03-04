@@ -234,7 +234,9 @@ def load_model():
                     model_metadata.get('image_size') or IMG_SIZE)
         print(f"  Classes: {class_names}")
         print(f"  Image size: {IMG_SIZE}")
-        print(f"  Training accuracy: {model_metadata.get('accuracy', 'N/A')}")
+        print(f"  Accuracy: {model_metadata.get('accuracy', 'N/A')}")
+        print(f"  Backbone: {model_metadata.get('backbone', 'N/A')}")
+        print(f"  Version: {model_metadata.get('version', 'N/A')}")
     else:
         # Fallback class names (must match model output order)
         class_names = ['deer', 'elephant', 'leopard', 'tiger', 'wolf']
@@ -378,8 +380,8 @@ async def lifespan(app: FastAPI):
 # ============================================
 app = FastAPI(
     title="WildTrackAI API",
-    description="AI-powered animal footprint identification system",
-    version="2.0.0",
+    description="AI-powered animal footprint identification system with MobileNetV2 v4-cpu (85.8% accuracy)",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -796,7 +798,7 @@ async def root(request: Request):
     return {
         "service": "WildTrackAI API",
         "status": "running",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "endpoints": {
             "health": "/health",
             "readiness": "/ready",

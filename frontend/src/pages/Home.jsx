@@ -10,7 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
 const features = [
-  { icon: FiZap, title: 'Deep Learning', desc: 'EfficientNetB3 v4 with MixUp, CutMix, and Test-Time Augmentation — trained on 5 species', color: 'from-orange-500 to-amber-500' },
+  { icon: FiZap, title: 'Deep Learning', desc: 'MobileNetV2 (v4-cpu) with cosine decay LR — 85.8% accuracy on 5 species', color: 'from-orange-500 to-amber-500' },
   { icon: GiPawPrint, title: 'Grad-CAM', desc: 'Explainable AI heatmaps showing which parts of the footprint drive the prediction', color: 'from-blue-500 to-cyan-500' },
   { icon: FiBarChart2, title: 'Live Analytics', desc: 'Real-time dashboard with species distribution, confidence trends, and per-class metrics', color: 'from-green-500 to-emerald-500' },
   { icon: FiLayers, title: 'Batch Mode', desc: 'Process hundreds of footprint images at once with CSV export for field research', color: 'from-purple-500 to-violet-500' },
@@ -41,7 +41,7 @@ export default function HomePage() {
     });
   }, []);
 
-  const accuracy = metrics?.accuracy ? (metrics.accuracy * 100).toFixed(1) : '77.5';
+  const accuracy = metrics?.accuracy ? (metrics.accuracy * 100).toFixed(1) : '85.8';
 
   return (
     <div className="space-y-14 pb-12">

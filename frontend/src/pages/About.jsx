@@ -4,7 +4,7 @@ import { GiPawPrint } from 'react-icons/gi';
 import { useTheme } from '../context/ThemeContext';
 
 const techStack = [
-  { icon: FiCpu, label: 'EfficientNetB3 v4', desc: 'Pre-trained on ImageNet, fine-tuned for footprints at 300×300 with SE Attention' },
+  { icon: FiCpu, label: 'MobileNetV2 v4-cpu', desc: 'Pre-trained on ImageNet, fine-tuned for footprints at 160×160 on strict-filtered dataset' },
   { icon: FiDatabase, label: 'SQLite + SQLAlchemy', desc: 'Persistent prediction storage with analytics' },
   { icon: FiLayers, label: 'FastAPI', desc: 'Async Python backend with auto-docs at /docs' },
   { icon: GiPawPrint, label: 'Grad-CAM', desc: 'Explainable AI heatmap visualization' },
@@ -44,7 +44,7 @@ export default function AboutPage() {
           WildTrackAI is a deep learning system that identifies animal species from footprint images.
           Built for wildlife researchers, conservationists, and ecologists, it supports 5 species
           and provides explainable AI through Grad-CAM heatmaps showing which parts of the footprint
-          contributed to the classification. The model achieves 77.5% accuracy using EfficientNetB3 v4
+          contributed to the classification. The model achieves 85.8% accuracy using MobileNetV2 v4-cpu
           with Test-Time Augmentation.
         </p>
       </motion.div>
@@ -82,7 +82,7 @@ export default function AboutPage() {
         <div className="space-y-3">
           {[
             { step: '1', text: 'Upload a footprint image (PNG, JPG, or WEBP)' },
-            { step: '2', text: 'EfficientNetB3 v4 processes the image at 300×300 with TTA (3 passes)' },
+            { step: '2', text: 'MobileNetV2 v4-cpu processes the image at 160×160 with TTA (3 passes)' },
             { step: '3', text: 'Softmax classification returns top-3 predictions with confidence' },
             { step: '4', text: 'Grad-CAM generates a heatmap showing important image regions' },
             { step: '5', text: 'Results saved to database for tracking and analytics' },
@@ -100,10 +100,10 @@ export default function AboutPage() {
         <h3 className="text-lg font-bold mb-4">Model Details</h3>
         <div className="grid grid-cols-2 gap-4">
           {[
-            { k: 'Architecture', v: 'EfficientNetB3 + SE Attention' },
-            { k: 'Input Size', v: '300 × 300 px' },
-            { k: 'Training Images', v: '2,000 (1,600 train + 400 val)' },
-            { k: 'Accuracy', v: '77.5% (with TTA)' },
+            { k: 'Architecture', v: 'MobileNetV2 (CPU-optimized)' },
+            { k: 'Input Size', v: '160 × 160 px' },
+            { k: 'Training Images', v: '1,760 (1,408 train + 352 val)' },
+            { k: 'Accuracy', v: '85.8% (validation)' },
             { k: 'Framework', v: 'TensorFlow 2.20' },
             { k: 'Explainability', v: 'Grad-CAM heatmaps' },
           ].map(item => (

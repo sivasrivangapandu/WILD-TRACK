@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
   const getModelStatus = () => {
     if (!metrics) return 'healthy';
-    if (metrics.accuracy < 0.7) return 'critical';
+    if (metrics.accuracy < 0.75) return 'critical';
     if (metrics.accuracy < 0.8) return 'warning';
     return 'healthy';
   };
