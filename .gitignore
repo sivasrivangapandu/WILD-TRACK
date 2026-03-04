@@ -21,3 +21,7 @@ Thumbs.db
 # Node
 node_modules/
 dist/
+
+# Generated training datasets (local only)
+backend/dataset_strict/
+backend/dataset_quarantine_strict/
