@@ -67,6 +67,8 @@ from consensus import compute_consensus
 # Model files
 MODEL_PATH = os.path.join(MODELS_DIR, "wildtrack_complete_model.h5")
 MODEL_PATH_LEGACY = os.path.join(MODELS_DIR, "wildtrack_final.h5")
+MODEL_PATH_V4 = os.path.join(MODELS_DIR, "wildtrack_v4.h5")
+MODEL_PATH_V3 = os.path.join(MODELS_DIR, "wildtrack_v3_b3.h5")
 METADATA_PATH = os.path.join(MODELS_DIR, "model_metadata.json")
 
 # Default image size (overridden by metadata if available)
@@ -196,12 +198,18 @@ def load_model():
     import tensorflow as tf
 
     # Try new model first, then legacy
-    candidate_files = [p for p in [MODEL_PATH, MODEL_PATH_LEGACY] if os.path.exists(p)]
+    candidate_files = [
+        p
+        for p in [MODEL_PATH, MODEL_PATH_LEGACY, MODEL_PATH_V4, MODEL_PATH_V3]
+        if os.path.exists(p)
+    ]
 
     if not candidate_files:
         print("WARNING: No trained model found!")
         print(f"  Checked: {MODEL_PATH}")
         print(f"  Checked: {MODEL_PATH_LEGACY}")
+        print(f"  Checked: {MODEL_PATH_V4}")
+        print(f"  Checked: {MODEL_PATH_V3}")
         print("  Run training first: python training/train.py")
         model_load_diagnostics = {
             "loaded_from": None,
