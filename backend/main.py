@@ -64,7 +64,8 @@ OUTPUTS_DIR = os.path.join(BASE_DIR, "outputs")
 from pipeline import pipeline
 from consensus import compute_consensus
 
-# Model files
+# Model files (order: .keras first, then .h5 variants)
+MODEL_PATH_KERAS = os.path.join(MODELS_DIR, "wildtrack_v4_cpu.keras")
 MODEL_PATH = os.path.join(MODELS_DIR, "wildtrack_complete_model.h5")
 MODEL_PATH_LEGACY = os.path.join(MODELS_DIR, "wildtrack_final.h5")
 MODEL_PATH_V4 = os.path.join(MODELS_DIR, "wildtrack_v4.h5")
@@ -123,8 +124,9 @@ model_load_diagnostics = {
 # MODEL DOWNLOAD (for cloud deployment)
 # ============================================
 MODEL_URLS = {
-    "wildtrack_complete_model.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v1.0-models/wildtrack_complete_model.h5",
-    "wildtrack_final.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v1.0-models/wildtrack_final.h5",
+    "wildtrack_v4_cpu.keras": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v2.0-models/wildtrack_v4_cpu.keras",
+    "wildtrack_complete_model.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v2.0-models/wildtrack_complete_model.h5",
+    "wildtrack_final.h5": "https://github.com/sivasrivangapandu/WILD-TRACK/releases/download/v2.0-models/wildtrack_final.h5",
 }
 
 model_download_status = {"status": "pending", "downloaded": [], "failed": []}
@@ -196,16 +198,27 @@ def load_model():
     download_models_if_missing()
 
     import tensorflow as tf
+    from tensorflow import keras
+    from tensorflow.keras import layers
 
-    # Try new model first, then legacy
+    # Register custom preprocessing layer for safe deserialization
+    @keras.utils.register_keras_serializable(package='WildTrackAI')
+    class MobileNetPreprocess(layers.Layer):
+        """MobileNetV2 preprocessing: scale [0,255] -> [-1,1]."""
+        def call(self, x):
+            x = tf.cast(x, tf.float32)
+            return (x / 127.5) - 1.0
+
+    # Try .keras first, then .h5 variants
     candidate_files = [
         p
-        for p in [MODEL_PATH, MODEL_PATH_LEGACY, MODEL_PATH_V4, MODEL_PATH_V3]
+        for p in [MODEL_PATH_KERAS, MODEL_PATH, MODEL_PATH_LEGACY, MODEL_PATH_V4, MODEL_PATH_V3]
         if os.path.exists(p)
     ]
 
     if not candidate_files:
         print("WARNING: No trained model found!")
+        print(f"  Checked: {MODEL_PATH_KERAS}")
         print(f"  Checked: {MODEL_PATH}")
         print(f"  Checked: {MODEL_PATH_LEGACY}")
         print(f"  Checked: {MODEL_PATH_V4}")
@@ -218,8 +231,12 @@ def load_model():
         }
         return
 
+    # Build custom_objects for deserialization compatibility
+    custom_objects = {
+        'MobileNetPreprocess': MobileNetPreprocess,
+    }
+
     # Support FocalLoss from v3/v4 training
-    custom_objects = {}
     try:
         from training.train_v4 import FocalLoss
         custom_objects['FocalLoss'] = FocalLoss
@@ -229,6 +246,21 @@ def load_model():
             custom_objects['FocalLoss'] = FocalLoss
         except ImportError:
             pass
+
+    # Register Keras 3.x ops that may not exist in older TF builds
+    try:
+        from keras.src.ops.numpy import TrueDivide
+        custom_objects['TrueDivide'] = TrueDivide
+    except ImportError:
+        pass
+    try:
+        if 'TrueDivide' not in custom_objects:
+            class TrueDivide(layers.Layer):
+                def call(self, x1, x2):
+                    return tf.math.divide(x1, x2)
+            custom_objects['TrueDivide'] = TrueDivide
+    except Exception:
+        pass
 
     model = None
     model_load_diagnostics = {
@@ -247,11 +279,11 @@ def load_model():
         )
         print(f"Loading model: {model_file} ({file_size_mb:.1f} MB)")
         try:
-            model = tf.keras.models.load_model(
-                model_file,
-                compile=False,
-                custom_objects=custom_objects,
-            )
+            load_kwargs = dict(compile=False, custom_objects=custom_objects)
+            # .h5 files with Lambda/custom layers need safe_mode=False
+            if model_file.endswith('.h5'):
+                load_kwargs['safe_mode'] = False
+            model = tf.keras.models.load_model(model_file, **load_kwargs)
             model_load_diagnostics["loaded_from"] = model_file
             print(f"  Model loaded successfully ({model.count_params():,} params)")
             break
