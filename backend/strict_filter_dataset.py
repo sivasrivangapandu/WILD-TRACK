@@ -107,9 +107,6 @@ def evaluate_image(filepath, args):
     if garbage_score >= args.garbage_threshold:
         reasons.append("non_real_or_unwanted")
 
-    if any("text_heavy" in reason for reason in garbage_reasons):
-        reasons.append("possible_watermark_or_text_overlay")
-
     return img, reasons, metrics
 
 

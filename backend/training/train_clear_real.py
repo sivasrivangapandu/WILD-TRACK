@@ -19,6 +19,16 @@ import subprocess
 from pathlib import Path
 
 
+def get_venv_python():
+    """Get the Python executable from the active venv"""
+    # Try to find venv from current sys.base_prefix
+    venv_path = Path(sys.prefix) / "Scripts" / "python.exe"
+    if venv_path.exists():
+        return str(venv_path)
+    # Fallback to system Python if venv not found
+    return sys.executable
+
+
 def run(cmd, cwd):
     print("\n$ " + " ".join(cmd))
     result = subprocess.run(cmd, cwd=cwd)
@@ -35,11 +45,13 @@ def main():
     parser.add_argument("--batch", type=int, default=None)
     parser.add_argument("--tta", type=int, default=None)
     parser.add_argument("--dry-run-filter", action="store_true")
-    parser.add_argument("--min-blur", type=float, default=50.0)
-    parser.add_argument("--min-entropy", type=float, default=3.2)
-    parser.add_argument("--garbage-threshold", type=float, default=85.0)
+    parser.add_argument("--min-blur", type=float, default=80.0)
+    parser.add_argument("--min-entropy", type=float, default=4.0)
+    parser.add_argument("--garbage-threshold", type=float, default=70.0)
     args = parser.parse_args()
 
+    python_exe = get_venv_python()
+    
     training_dir = Path(__file__).resolve().parent
     backend_dir = training_dir.parent
     strict_filter_script = backend_dir / "strict_filter_dataset.py"
@@ -47,7 +59,7 @@ def main():
     strict_dataset_dir = backend_dir / "dataset_strict"
 
     filter_cmd = [
-        sys.executable,
+        python_exe,
         str(strict_filter_script),
         "--source", str(backend_dir / "dataset_cleaned"),
         "--output", str(strict_dataset_dir),
@@ -66,7 +78,7 @@ def main():
         return
 
     train_cmd = [
-        sys.executable,
+        python_exe,
         str(train_script),
         "--dataset", str(strict_dataset_dir),
         "--target-accuracy", str(args.target_accuracy),
