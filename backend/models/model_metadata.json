@@ -2,7 +2,15 @@
   "version": "v4-cpu",
   "backbone": "MobileNetV2",
   "image_size": 160,
+  "img_size": 160,
   "classes": [
+    "deer",
+    "elephant",
+    "leopard",
+    "tiger",
+    "wolf"
+  ],
+  "class_names": [
     "deer",
     "elephant",
     "leopard",

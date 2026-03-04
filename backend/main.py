@@ -228,8 +228,10 @@ def load_model():
     if os.path.exists(METADATA_PATH):
         with open(METADATA_PATH, 'r') as f:
             model_metadata = json.load(f)
-        class_names = model_metadata.get('class_names', [])
-        IMG_SIZE = model_metadata.get('img_size', IMG_SIZE)
+        class_names = (model_metadata.get('class_names') or
+                       model_metadata.get('classes') or [])
+        IMG_SIZE = (model_metadata.get('img_size') or
+                    model_metadata.get('image_size') or IMG_SIZE)
         print(f"  Classes: {class_names}")
         print(f"  Image size: {IMG_SIZE}")
         print(f"  Training accuracy: {model_metadata.get('accuracy', 'N/A')}")
@@ -1481,7 +1483,7 @@ async def get_model_metrics():
         "training_samples": model_metadata.get("training_samples", 0),
         "validation_samples": model_metadata.get("validation_samples", 0),
         "training_date": model_metadata.get("training_date", None),
-        "img_size": model_metadata.get("img_size", IMG_SIZE),
+        "img_size": model_metadata.get("img_size", model_metadata.get("image_size", IMG_SIZE)),
         "num_classes": model_metadata.get("num_classes", len(class_names)),
         "class_names": class_names,
         "per_class_report": eval_report,
