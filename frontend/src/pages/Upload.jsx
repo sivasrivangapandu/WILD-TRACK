@@ -487,20 +487,27 @@ export default function UploadPage() {
     return 'confidence-glow-red';
   }, [result]);
 
-  // Dynamically make Layout background transparent when showing animated background
+  // Use injected <style> with !important to override Layout's React-managed inline styles
   useEffect(() => {
     const showBg = result && !result.is_unknown;
-    const layoutRoot = document.querySelector('.min-h-screen.transition-colors');
-    const mainEl = document.querySelector('main');
+    const styleId = 'wildtrack-bg-override';
     if (showBg) {
-      if (layoutRoot) layoutRoot.style.backgroundColor = 'transparent';
-      if (mainEl) mainEl.style.backgroundColor = 'transparent';
-      document.body.style.backgroundColor = '#000';
+      let style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.textContent = `
+        body { background-color: #000 !important; }
+        .min-h-screen { background-color: transparent !important; }
+        main { background-color: transparent !important; }
+        #root > div { background-color: transparent !important; }
+      `;
     }
     return () => {
-      if (layoutRoot) layoutRoot.style.backgroundColor = '';
-      if (mainEl) mainEl.style.backgroundColor = '';
-      document.body.style.backgroundColor = '';
+      const style = document.getElementById(styleId);
+      if (style) style.remove();
     };
   }, [result]);
 
