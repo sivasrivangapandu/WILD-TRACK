@@ -189,15 +189,22 @@ async def upload_avatar(
     if len(contents) > MAX_AVATAR_SIZE:
         raise HTTPException(status_code=400, detail="Image must be under 5 MB")
 
-    # Save file
-    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
-    filename = f"{user.id}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    # Upload to Cloudinary
+    try:
+        import cloudinary
+        import cloudinary.uploader
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            public_id=f"avatar_{user.id}",
+            folder="wildtrack_avatars",
+            overwrite=True
+        )
+        avatar_url = upload_result.get("secure_url")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {e}")
 
     # Update user record
-    user.avatar_url = f"/uploads/avatars/{filename}"
+    user.avatar_url = avatar_url
     user.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)

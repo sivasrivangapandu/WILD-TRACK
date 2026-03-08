@@ -979,11 +979,22 @@ async def predict(
     # If final quality adjusted confidence is below threshold, flag for review
     needs_review = 1 if result.get("quality_adjusted_confidence", 1.0) < CONFIDENCE_THRESHOLD or result["is_unknown"] else 0
 
-    # Save to uploads
     pred_id = str(uuid.uuid4())[:8]
-    save_path = os.path.join(UPLOADS_DIR, f"{pred_id}_{file.filename}")
-    with open(save_path, 'wb') as f:
-        f.write(contents)
+    
+    # Save to Cloudinary
+    image_url = ""
+    try:
+        import cloudinary
+        import cloudinary.uploader
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            public_id=f"pred_{pred_id}",
+            folder="wildtrack_predictions",
+            overwrite=True
+        )
+        image_url = upload_result.get("secure_url")
+    except Exception as e:
+        print(f"Cloudinary upload failed: {e}")
 
     # Store in database
     db = SessionLocal()
@@ -993,7 +1004,7 @@ async def predict(
             species=result["predicted_class"],
             confidence=result["confidence"],
             top3=json.dumps(result["top3"]),
-            image_path=save_path,
+            image_path=image_url,
             filename=file.filename,
             heatmap_generated=1 if result["heatmap"] else 0,
             latitude=latitude,
@@ -1055,6 +1066,21 @@ async def predict_batch(files: List[UploadFile] = File(...),
             blur_level = quality_metrics.get('blur_level', 100)
             requires_field_validation = blur_level < 45
 
+            # Save to Cloudinary
+            image_url = ""
+            try:
+                import cloudinary
+                import cloudinary.uploader
+                upload_result = cloudinary.uploader.upload(
+                    contents,
+                    public_id=f"pred_{pred_id}",
+                    folder="wildtrack_predictions",
+                    overwrite=True
+                )
+                image_url = upload_result.get("secure_url")
+            except Exception as e:
+                print(f"Cloudinary upload failed: {e}")
+
             # Store in DB
             db = SessionLocal()
             try:
@@ -1064,6 +1090,7 @@ async def predict_batch(files: List[UploadFile] = File(...),
                     confidence=result["confidence"],
                     top3=json.dumps(result["top3"]),
                     filename=file.filename,
+                    image_path=image_url,
                     heatmap_generated=0,
                 )
                 db.add(prediction)
