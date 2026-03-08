@@ -394,6 +394,16 @@ export default function UploadPage() {
   // GPS Location state
   const [location, setLocation] = useState(null);
 
+  // Background Videos mapping
+  const SPECIES_VIDEOS = {
+    tiger: "https://res.cloudinary.com/demo/video/upload/tiger.mp4",
+    elephant: "https://res.cloudinary.com/demo/video/upload/elephants.mp4",
+    leopard: "https://cdn.pixabay.com/video/2021/08/11/84687-586718423_large.mp4", // Leopard
+    deer: "https://cdn.pixabay.com/video/2019/04/23/22934-331668478_large.mp4",  // Deer in forest
+    wolf: "https://cdn.pixabay.com/video/2020/03/17/33827-399088686_large.mp4",  // Wolf in snow
+    default: "https://cdn.pixabay.com/video/2020/07/22/45366-443144893_large.mp4"
+  };
+
   // Attempt to get GPS on component mount
   useEffect(() => {
     if (navigator.geolocation) {
@@ -470,495 +480,525 @@ export default function UploadPage() {
   }, [result]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <motion.div whileHover={{ rotate: 10 }} className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-          <FiUpload className="text-white text-lg" />
-        </motion.div>
-        <div>
-          <h1 className="text-2xl font-bold neon-heading">Upload Footprint</h1>
-          <p className="text-sm t-tertiary">Identify species with calibrated AI confidence</p>
-        </div>
-      </div>
-
-      {/* Drop zone / Camera Toggle */}
-      {!preview && !isCameraActive && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={`${cardClass} p-12 text-center ${dragActive ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-500/5' : ''}`}
-          onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-        >
-          <motion.div animate={dragActive ? { scale: 1.1 } : { scale: 1 }} className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 mb-6">
-            <FiImage className="text-4xl text-orange-500" />
+    <>
+      {/* Dynamic Background Video */}
+      <AnimatePresence mode="wait">
+        {result && !result.is_unknown && (
+          <motion.div
+            key={result.species}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="fixed inset-0 z-[-1] overflow-hidden bg-black"
+          >
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute min-w-full min-h-full object-cover opacity-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            >
+              <source src={SPECIES_VIDEOS[result.species?.toLowerCase()] || SPECIES_VIDEOS.default} type="video/mp4" />
+            </video>
+            {/* Elegant dark overlays to ensure the app UI remains fully readable */}
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[#0a0a0a]/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-transparent to-[#0a0a0a] opacity-90" />
           </motion.div>
-          <p className="text-xl font-semibold mb-2">Drop footprint image here</p>
-          <p className="text-sm t-tertiary mb-8">or choose an upload method below</p>
+        )}
+      </AnimatePresence>
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button
-              onClick={() => document.getElementById('file-input').click()}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all"
-            >
-              <FiUpload /> Browse Files
-            </button>
-            <button
-              onClick={() => updateState({ isCameraActive: true })}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold border border-orange-500/30 text-orange-500 bg-orange-500/5 hover:bg-orange-500/10 hover:scale-105 active:scale-95 transition-all"
-            >
-              <FiCamera /> Use Camera
-            </button>
+      <div className="max-w-5xl mx-auto space-y-6 relative z-10 transition-colors duration-1000">
+        <div className="flex items-center gap-3 mb-2">
+          <motion.div whileHover={{ rotate: 10 }} className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors duration-1000 ${result ? 'bg-white/10 backdrop-blur-md shadow-white/5' : 'bg-gradient-to-br from-orange-500 to-amber-500 shadow-orange-500/20'}`}>
+            <FiUpload className="text-white text-lg" />
+          </motion.div>
+          <div>
+            <h1 className={`text-2xl font-bold transition-colors duration-1000 ${result ? 'text-white drop-shadow-lg' : 'neon-heading'}`}>Upload Footprint</h1>
+            <p className={`text-sm transition-colors duration-1000 ${result ? 'text-white/80' : 't-tertiary'}`}>Identify species with calibrated AI confidence</p>
           </div>
-          <input id="file-input" type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-        </motion.div>
-      )}
+        </div>
 
-      {/* Camera Capture UI */}
-      {!preview && isCameraActive && (
-        <CameraCapture
-          onCapture={(f) => {
-            updateState({ isCameraActive: false });
-            handleFile(f);
-          }}
-          onCancel={() => updateState({ isCameraActive: false })}
-        />
-      )}
+        {/* Drop zone / Camera Toggle */}
+        {!preview && !isCameraActive && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`${cardClass} p-12 text-center ${dragActive ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-500/5' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={handleDrop}
+          >
+            <motion.div animate={dragActive ? { scale: 1.1 } : { scale: 1 }} className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 mb-6">
+              <FiImage className="text-4xl text-orange-500" />
+            </motion.div>
+            <p className="text-xl font-semibold mb-2">Drop footprint image here</p>
+            <p className="text-sm t-tertiary mb-8">or choose an upload method below</p>
 
-      {/* Preview + results */}
-      {preview && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} p-6`}>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--bg-surface-2)' }}>
-                <FiImage className="text-orange-500" />
-              </div>
-              <span className="font-medium truncate max-w-xs text-sm">{file?.name}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full t-tertiary" style={{ background: 'var(--bg-surface-2)' }}>
-                {(file?.size / 1024).toFixed(0)} KB
-              </span>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <button
+                onClick={() => document.getElementById('file-input').click()}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                <FiUpload /> Browse Files
+              </button>
+              <button
+                onClick={() => updateState({ isCameraActive: true })}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold border border-orange-500/30 text-orange-500 bg-orange-500/5 hover:bg-orange-500/10 hover:scale-105 active:scale-95 transition-all"
+              >
+                <FiCamera /> Use Camera
+              </button>
             </div>
-            <button onClick={reset} className="p-2 rounded-xl transition surface-hover">
-              <FiX />
-            </button>
-          </div>
+            <input id="file-input" type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+          </motion.div>
+        )}
 
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Image */}
-            <div className="flex-1">
-              <div className="rounded-xl overflow-hidden min-h-[320px]" style={{ background: 'var(--bg-surface-2)' }}>
-                <img
-                  src={showHeatmap && result?.heatmap ? `data:image/png;base64,${result.heatmap}` : preview}
-                  alt="preview"
-                  className="w-full max-h-96 object-contain"
-                />
+        {/* Camera Capture UI */}
+        {!preview && isCameraActive && (
+          <CameraCapture
+            onCapture={(f) => {
+              updateState({ isCameraActive: false });
+              handleFile(f);
+            }}
+            onCancel={() => updateState({ isCameraActive: false })}
+          />
+        )}
+
+        {/* Preview + results */}
+        {preview && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} p-6`}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--bg-surface-2)' }}>
+                  <FiImage className="text-orange-500" />
+                </div>
+                <span className="font-medium truncate max-w-xs text-sm">{file?.name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full t-tertiary" style={{ background: 'var(--bg-surface-2)' }}>
+                  {(file?.size / 1024).toFixed(0)} KB
+                </span>
               </div>
-              {result?.heatmap && (
-                <button onClick={() => updateState({ showHeatmap: !showHeatmap })} className="mt-3 text-sm flex items-center gap-1.5 text-orange-500 hover:text-orange-400 font-medium transition">
-                  <FiEye size={14} /> {showHeatmap ? 'Show Original Image' : 'Show Grad-CAM Heatmap'}
-                </button>
-              )}
-
-              <div className="border-t border-white/5 my-4" />
-
-              {/* Track Morphology Analysis */}
-              {result && !result.is_unknown && (
-                <TrackMorphologyPanel species={result.species} showHeatmap={showHeatmap} confidence={result.confidence} imageQuality={result.image_quality} />
-              )}
+              <button onClick={reset} className="p-2 rounded-xl transition surface-hover">
+                <FiX />
+              </button>
             </div>
 
-            {/* Results */}
-            <div className="flex-1 space-y-4">
-              {!result && !loading && (
-                <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-                  onClick={handleSubmit} disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all text-lg">
-                  <FiActivity className="inline mr-2" /> Identify Species
-                </motion.button>
-              )}
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Image */}
+              <div className="flex-1">
+                <div className="rounded-xl overflow-hidden min-h-[320px]" style={{ background: 'var(--bg-surface-2)' }}>
+                  <img
+                    src={showHeatmap && result?.heatmap ? `data:image/png;base64,${result.heatmap}` : preview}
+                    alt="preview"
+                    className="w-full max-h-96 object-contain"
+                  />
+                </div>
+                {result?.heatmap && (
+                  <button onClick={() => updateState({ showHeatmap: !showHeatmap })} className="mt-3 text-sm flex items-center gap-1.5 text-orange-500 hover:text-orange-400 font-medium transition">
+                    <FiEye size={14} /> {showHeatmap ? 'Show Original Image' : 'Show Grad-CAM Heatmap'}
+                  </button>
+                )}
 
-              {loading && (
-                <AnalysisAnimation />
-              )}
+                <div className="border-t border-white/5 my-4" />
 
-              {error && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">{error}</div>
-              )}
+                {/* Track Morphology Analysis */}
+                {result && !result.is_unknown && (
+                  <TrackMorphologyPanel species={result.species} showHeatmap={showHeatmap} confidence={result.confidence} imageQuality={result.image_quality} />
+                )}
+              </div>
 
-              <AnimatePresence>
-                {result && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                    {/* Main prediction — confidence-coded glow card */}
-                    <div className={`relative p-5 rounded-2xl overflow-hidden ${resultGlowClass} ${result.is_unknown
-                      ? 'bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20'
-                      : ''}`}
-                      style={result.is_unknown ? {} : { background: 'var(--bg-card)' }}>
+              {/* Results */}
+              <div className="flex-1 space-y-4">
+                {!result && !loading && (
+                  <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                    onClick={handleSubmit} disabled={loading}
+                    className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all text-lg">
+                    <FiActivity className="inline mr-2" /> Identify Species
+                  </motion.button>
+                )}
 
-                      <div className="flex items-start gap-4">
-                        {/* Confidence Ring — cinematic gauge */}
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.6 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.3, type: 'spring', stiffness: 180 }}
-                          className="flex-shrink-0 confidence-orb"
-                        >
-                          <ConfidenceRing
-                            confidence={result.confidence}
-                            size={100}
-                            strokeWidth={7}
-                            isUnknown={result.is_unknown}
-                          />
-                        </motion.div>
+                {loading && (
+                  <AnalysisAnimation />
+                )}
 
-                        {/* Species info */}
-                        <div className="flex-1 min-w-0">
-                          {result.is_unknown ? (
-                            <>
-                              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
-                                className="text-xs uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
-                                <FiAlertTriangle size={12} /> Species Not Identified
-                              </motion.div>
-                              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
-                                className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">Unknown Species</motion.div>
-                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-                                className="text-xs mt-1 t-secondary">
-                                Closest match: <span className="capitalize font-semibold text-amber-500">{result.raw_class}</span>
-                              </motion.div>
-                            </>
-                          ) : (
-                            <>
-                              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
-                                className="text-xs uppercase tracking-wider text-gray-500 font-semibold flex items-center gap-1.5">
-                                <FiTarget size={12} /> Predicted Species
-                              </motion.div>
-                              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
-                                className="text-2xl font-extrabold capitalize mt-1">{result.species}</motion.div>
-                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-                                className="flex items-center gap-2 mt-2 flex-wrap">
-                                <FiCheckCircle className="text-green-500" size={14} />
-                                <span className="text-xs font-medium text-green-500">Identified with {(result.confidence * 100).toFixed(1)}% confidence</span>
-                              </motion.div>
-                              {/* Model + TTA badges */}
-                              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-                                className="flex items-center gap-2 mt-2 flex-wrap">
-                                {result.model_version && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-500/15 text-orange-500 border border-orange-500/20">
-                                    <FiCpu size={10} /> {result.model_version}
-                                  </span>
-                                )}
-                                {result.tta_enabled && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/20">
-                                    TTA
-                                  </span>
-                                )}
-                              </motion.div>
+                {error && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">{error}</div>
+                )}
 
-                              {/* ── V2 Reliability Verdict ── */}
-                              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
-                                className="mt-3"
-                              >
-                                {(() => {
-                                  const conf = result.quality_adjusted_confidence || result.confidence;
-                                  const isReview = result.needs_review || result.requires_field_validation;
-                                  const reliability = conf >= 0.75 ? 'High'
-                                    : conf >= 0.6 ? 'Moderate'
-                                      : conf >= 0.4 ? 'Low' : 'Insufficient';
-                                  const reliabilityColor = conf >= 0.75 ? 'text-green-400 bg-green-500/10 border-green-500/20'
-                                    : conf >= 0.6 ? 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                                      : conf >= 0.4 ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
-                                        : 'text-red-400 bg-red-500/10 border-red-500/20';
-                                  const verdictIcon = isReview ? FiAlertTriangle : FiCheckCircle;
-                                  const VerdictIcon = verdictIcon;
+                <AnimatePresence>
+                  {result && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                      {/* Main prediction — confidence-coded glow card */}
+                      <div className={`relative p-5 rounded-2xl overflow-hidden ${resultGlowClass} ${result.is_unknown
+                        ? 'bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20'
+                        : ''}`}
+                        style={result.is_unknown ? {} : { background: 'var(--bg-card)' }}>
 
-                                  return (
-                                    <div className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold ${reliabilityColor}`}>
-                                      <VerdictIcon size={14} />
-                                      <span>{reliability} Reliability</span>
-                                      <span className="mx-1 opacity-30">|</span>
-                                      <span className="font-normal">
-                                        {isReview
-                                          ? 'Review Recommended — field validation suggested'
-                                          : 'AI Confidence Verified'}
-                                      </span>
-                                    </div>
-                                  );
-                                })()}
-                              </motion.div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {result.is_unknown && (
-                        <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
-                          className="mt-4 p-3 rounded-xl text-xs bg-amber-500/10 text-amber-500">
-                          Confidence below 40% threshold. This footprint may belong to a species not in our database (deer, elephant, leopard, tiger, wolf) or the image may not be a clear footprint.
-                        </motion.div>
-                      )}
-
-                      {/* Confidence bar */}
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
-                        className="mt-4">
-                        <div className="flex justify-between text-sm mb-1.5">
-                          <span className="t-secondary">Confidence</span>
-                          <span className={`font-mono font-bold ${result.is_unknown ? 'text-amber-500' : 'text-orange-500'}`}>{(result.confidence * 100).toFixed(1)}%</span>
-                        </div>
-                        <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                        <div className="flex items-start gap-4">
+                          {/* Confidence Ring — cinematic gauge */}
                           <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${result.confidence * 100}%` }}
-                            transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                            className={`h-full rounded-full ${result.is_unknown ? 'bg-gradient-to-r from-amber-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-amber-500'}`} />
-                        </div>
-                        {/* Confidence level label */}
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 1.25 }}
-                          className={`text-xs mt-2 font-medium flex items-center gap-1 ${result.confidence >= 0.9 ? 'text-green-500' :
-                            result.confidence >= 0.7 ? 'text-blue-500' :
-                              result.confidence >= 0.4 ? 'text-yellow-500' : 'text-orange-500'
-                            }`}>
-                          {result.confidence >= 0.9 ? '✓ Very High Confidence' :
-                            result.confidence >= 0.7 ? '→ Good Confidence' :
-                              result.confidence >= 0.4 ? '⚠ Moderate Confidence' : '? Low Confidence'}
-                        </motion.div>
-                      </motion.div>
+                            initial={{ opacity: 0, scale: 0.6 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.3, type: 'spring', stiffness: 180 }}
+                            className="flex-shrink-0 confidence-orb"
+                          >
+                            <ConfidenceRing
+                              confidence={result.confidence}
+                              size={100}
+                              strokeWidth={7}
+                              isUnknown={result.is_unknown}
+                            />
+                          </motion.div>
 
-                      {/* Entropy info */}
-                      {result.entropy !== undefined && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
-                          className={`mt-3 pt-3 border-t text-xs space-y-1.5 b-subtle`}>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 uppercase tracking-wider font-semibold flex items-center gap-1"><FiCpu size={11} /> Model Uncertainty</span>
-                            <span className={`font-bold ${result.entropy_ratio > 0.85 ? 'text-red-500' : result.entropy_ratio > 0.5 ? 'text-yellow-500' : 'text-green-500'}`}>
-                              {result.entropy_ratio > 0.85 ? 'High' : result.entropy_ratio > 0.5 ? 'Moderate' : 'Low'} ({(result.entropy_ratio * 100).toFixed(0)}%)
-                            </span>
+                          {/* Species info */}
+                          <div className="flex-1 min-w-0">
+                            {result.is_unknown ? (
+                              <>
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
+                                  className="text-xs uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
+                                  <FiAlertTriangle size={12} /> Species Not Identified
+                                </motion.div>
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
+                                  className="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">Unknown Species</motion.div>
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+                                  className="text-xs mt-1 t-secondary">
+                                  Closest match: <span className="capitalize font-semibold text-amber-500">{result.raw_class}</span>
+                                </motion.div>
+                              </>
+                            ) : (
+                              <>
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
+                                  className="text-xs uppercase tracking-wider text-gray-500 font-semibold flex items-center gap-1.5">
+                                  <FiTarget size={12} /> Predicted Species
+                                </motion.div>
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
+                                  className="text-2xl font-extrabold capitalize mt-1">{result.species}</motion.div>
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+                                  className="flex items-center gap-2 mt-2 flex-wrap">
+                                  <FiCheckCircle className="text-green-500" size={14} />
+                                  <span className="text-xs font-medium text-green-500">Identified with {(result.confidence * 100).toFixed(1)}% confidence</span>
+                                </motion.div>
+                                {/* Model + TTA badges */}
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+                                  className="flex items-center gap-2 mt-2 flex-wrap">
+                                  {result.model_version && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-orange-500/15 text-orange-500 border border-orange-500/20">
+                                      <FiCpu size={10} /> {result.model_version}
+                                    </span>
+                                  )}
+                                  {result.tta_enabled && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/20">
+                                      TTA
+                                    </span>
+                                  )}
+                                </motion.div>
+
+                                {/* ── V2 Reliability Verdict ── */}
+                                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
+                                  className="mt-3"
+                                >
+                                  {(() => {
+                                    const conf = result.quality_adjusted_confidence || result.confidence;
+                                    const isReview = result.needs_review || result.requires_field_validation;
+                                    const reliability = conf >= 0.75 ? 'High'
+                                      : conf >= 0.6 ? 'Moderate'
+                                        : conf >= 0.4 ? 'Low' : 'Insufficient';
+                                    const reliabilityColor = conf >= 0.75 ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                                      : conf >= 0.6 ? 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                                        : conf >= 0.4 ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+                                          : 'text-red-400 bg-red-500/10 border-red-500/20';
+                                    const verdictIcon = isReview ? FiAlertTriangle : FiCheckCircle;
+                                    const VerdictIcon = verdictIcon;
+
+                                    return (
+                                      <div className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold ${reliabilityColor}`}>
+                                        <VerdictIcon size={14} />
+                                        <span>{reliability} Reliability</span>
+                                        <span className="mx-1 opacity-30">|</span>
+                                        <span className="font-normal">
+                                          {isReview
+                                            ? 'Review Recommended — field validation suggested'
+                                            : 'AI Confidence Verified'}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </motion.div>
+                              </>
+                            )}
                           </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                        </div>
+
+                        {result.is_unknown && (
+                          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
+                            className="mt-4 p-3 rounded-xl text-xs bg-amber-500/10 text-amber-500">
+                            Confidence below 40% threshold. This footprint may belong to a species not in our database (deer, elephant, leopard, tiger, wolf) or the image may not be a clear footprint.
+                          </motion.div>
+                        )}
+
+                        {/* Confidence bar */}
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+                          className="mt-4">
+                          <div className="flex justify-between text-sm mb-1.5">
+                            <span className="t-secondary">Confidence</span>
+                            <span className={`font-mono font-bold ${result.is_unknown ? 'text-amber-500' : 'text-orange-500'}`}>{(result.confidence * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
                             <motion.div
                               initial={{ width: 0 }}
-                              animate={{ width: `${result.entropy_ratio * 100}%` }}
-                              transition={{ duration: 1, delay: 1.4 }}
-                              className={`h-full rounded-full ${result.entropy_ratio > 0.85 ? 'bg-red-500' : result.entropy_ratio > 0.5 ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                              animate={{ width: `${result.confidence * 100}%` }}
+                              transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                              className={`h-full rounded-full ${result.is_unknown ? 'bg-gradient-to-r from-amber-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-amber-500'}`} />
                           </div>
-                          <div className="flex gap-3 text-gray-500 font-mono text-[10px] mt-2">
-                            <span title="Shannon Entropy">H={result.entropy?.toFixed(3)}</span>
-                            <span title="Temperature scaling">T={result.temperature || 1}</span>
-                            <span title="Classification threshold">θ=0.4</span>
-                          </div>
+                          {/* Confidence level label */}
                           <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 1.5 }}
-                            className={`text-[11px] leading-relaxed mt-2 p-2 rounded`} style={{ background: 'var(--bg-surface-2)' }}>
-                            {result.entropy_ratio > 0.85 ? 'The model shows high uncertainty. Multiple species have similar confidence scores. Results should be verified or additional context considered.' :
-                              result.entropy_ratio > 0.5 ? 'The model shows moderate uncertainty. While a prediction is made, other species have notable probability. Context awareness is recommended.' :
-                                'The model is confident. The predicted species has significantly higher probability than alternatives.'}
+                            transition={{ delay: 1.25 }}
+                            className={`text-xs mt-2 font-medium flex items-center gap-1 ${result.confidence >= 0.9 ? 'text-green-500' :
+                              result.confidence >= 0.7 ? 'text-blue-500' :
+                                result.confidence >= 0.4 ? 'text-yellow-500' : 'text-orange-500'
+                              }`}>
+                            {result.confidence >= 0.9 ? '✓ Very High Confidence' :
+                              result.confidence >= 0.7 ? '→ Good Confidence' :
+                                result.confidence >= 0.4 ? '⚠ Moderate Confidence' : '? Low Confidence'}
                           </motion.div>
                         </motion.div>
-                      )}
-                    </div>
 
-                    {/* ── AI CONSENSUS VALIDATION PANEL ── */}
-                    {result.consensus && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.95, duration: 0.4 }}
-                        className={`p-5 rounded-2xl border overflow-hidden relative ${result.consensus.verdict_level === 'verified' ? 'border-green-500/25 bg-green-500/[0.04]' :
+                        {/* Entropy info */}
+                        {result.entropy !== undefined && (
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
+                            className={`mt-3 pt-3 border-t text-xs space-y-1.5 b-subtle`}>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 uppercase tracking-wider font-semibold flex items-center gap-1"><FiCpu size={11} /> Model Uncertainty</span>
+                              <span className={`font-bold ${result.entropy_ratio > 0.85 ? 'text-red-500' : result.entropy_ratio > 0.5 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                {result.entropy_ratio > 0.85 ? 'High' : result.entropy_ratio > 0.5 ? 'Moderate' : 'Low'} ({(result.entropy_ratio * 100).toFixed(0)}%)
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${result.entropy_ratio * 100}%` }}
+                                transition={{ duration: 1, delay: 1.4 }}
+                                className={`h-full rounded-full ${result.entropy_ratio > 0.85 ? 'bg-red-500' : result.entropy_ratio > 0.5 ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                            </div>
+                            <div className="flex gap-3 text-gray-500 font-mono text-[10px] mt-2">
+                              <span title="Shannon Entropy">H={result.entropy?.toFixed(3)}</span>
+                              <span title="Temperature scaling">T={result.temperature || 1}</span>
+                              <span title="Classification threshold">θ=0.4</span>
+                            </div>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 1.5 }}
+                              className={`text-[11px] leading-relaxed mt-2 p-2 rounded`} style={{ background: 'var(--bg-surface-2)' }}>
+                              {result.entropy_ratio > 0.85 ? 'The model shows high uncertainty. Multiple species have similar confidence scores. Results should be verified or additional context considered.' :
+                                result.entropy_ratio > 0.5 ? 'The model shows moderate uncertainty. While a prediction is made, other species have notable probability. Context awareness is recommended.' :
+                                  'The model is confident. The predicted species has significantly higher probability than alternatives.'}
+                            </motion.div>
+                          </motion.div>
+                        )}
+                      </div>
+
+                      {/* ── AI CONSENSUS VALIDATION PANEL ── */}
+                      {result.consensus && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.95, duration: 0.4 }}
+                          className={`p-5 rounded-2xl border overflow-hidden relative ${result.consensus.verdict_level === 'verified' ? 'border-green-500/25 bg-green-500/[0.04]' :
                             result.consensus.verdict_level === 'consensus' ? 'border-blue-500/25 bg-blue-500/[0.04]' :
                               result.consensus.verdict_level === 'ambiguous' ? 'border-red-500/25 bg-red-500/[0.04]' :
                                 result.consensus.verdict_level === 'weak' ? 'border-yellow-500/25 bg-yellow-500/[0.04]' :
                                   'border-purple-500/25 bg-purple-500/[0.04]'
-                          }`}
-                      >
-                        {/* Background accent */}
-                        <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-[0.06] ${result.consensus.verdict_level === 'verified' ? 'bg-green-500' :
+                            }`}
+                        >
+                          {/* Background accent */}
+                          <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-[0.06] ${result.consensus.verdict_level === 'verified' ? 'bg-green-500' :
                             result.consensus.verdict_level === 'consensus' ? 'bg-blue-500' :
                               result.consensus.verdict_level === 'ambiguous' ? 'bg-red-500' :
                                 'bg-yellow-500'
-                          }`} />
+                            }`} />
 
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className={`w-6 h-6 rounded-md flex items-center justify-center ${result.consensus.verdict_level === 'verified' ? 'bg-green-500/15' :
+                          {/* Header */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${result.consensus.verdict_level === 'verified' ? 'bg-green-500/15' :
                               result.consensus.verdict_level === 'consensus' ? 'bg-blue-500/15' :
                                 result.consensus.verdict_level === 'ambiguous' ? 'bg-red-500/15' :
                                   'bg-yellow-500/15'
-                            }`}>
-                            {result.consensus.agreement
-                              ? <FiCheckCircle size={13} className={result.consensus.verdict_level === 'verified' ? 'text-green-400' : 'text-blue-400'} />
-                              : <FiAlertTriangle size={13} className="text-red-400" />
-                            }
-                          </div>
-                          <span className="text-xs font-bold uppercase tracking-wider t-tertiary">AI Consensus Validation</span>
-                          <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold ${result.consensus.verdict_level === 'verified' ? 'bg-green-500/15 text-green-400' :
+                              }`}>
+                              {result.consensus.agreement
+                                ? <FiCheckCircle size={13} className={result.consensus.verdict_level === 'verified' ? 'text-green-400' : 'text-blue-400'} />
+                                : <FiAlertTriangle size={13} className="text-red-400" />
+                              }
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider t-tertiary">AI Consensus Validation</span>
+                            <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold ${result.consensus.verdict_level === 'verified' ? 'bg-green-500/15 text-green-400' :
                               result.consensus.verdict_level === 'consensus' ? 'bg-blue-500/15 text-blue-400' :
                                 result.consensus.verdict_level === 'ambiguous' ? 'bg-red-500/15 text-red-400' :
                                   result.consensus.verdict_level === 'weak' ? 'bg-yellow-500/15 text-yellow-400' :
                                     'bg-purple-500/15 text-purple-400'
-                            }`}>
-                            {result.consensus.verdict}
-                          </span>
-                        </div>
-
-                        {/* Dual model comparison */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          {/* Primary Model */}
-                          <div className="p-3 rounded-xl surface-inset">
-                            <div className="text-[10px] t-dim uppercase tracking-wider font-semibold mb-1.5">Primary — TTA Path</div>
-                            <div className="text-sm font-bold capitalize">{result.consensus.primary_prediction}</div>
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${result.consensus.primary_confidence * 100}%` }}
-                                  transition={{ delay: 1.1, duration: 0.8 }}
-                                  className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500"
-                                />
-                              </div>
-                              <span className="text-xs font-mono font-bold text-orange-500">{(result.consensus.primary_confidence * 100).toFixed(1)}%</span>
-                            </div>
+                              }`}>
+                              {result.consensus.verdict}
+                            </span>
                           </div>
 
-                          {/* Second Opinion */}
-                          <div className="p-3 rounded-xl surface-inset">
-                            <div className="text-[10px] t-dim uppercase tracking-wider font-semibold mb-1.5">Second Opinion</div>
-                            <div className={`text-sm font-bold capitalize ${!result.consensus.agreement ? 'text-red-400' : ''}`}>
-                              {result.consensus.second_opinion_prediction}
-                            </div>
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
-                                <motion.div
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${result.consensus.second_opinion_confidence * 100}%` }}
-                                  transition={{ delay: 1.2, duration: 0.8 }}
-                                  className={`h-full rounded-full ${result.consensus.agreement ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-gradient-to-r from-red-500 to-pink-500'}`}
-                                />
-                              </div>
-                              <span className={`text-xs font-mono font-bold ${result.consensus.agreement ? 'text-blue-500' : 'text-red-400'}`}>
-                                {(result.consensus.second_opinion_confidence * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Metrics row */}
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                          <div className="p-2 rounded-lg surface-inset">
-                            <div className="text-[9px] t-dim uppercase tracking-wider">Agreement</div>
-                            <div className={`text-sm font-bold mt-1 ${result.consensus.agreement ? 'text-green-400' : 'text-red-400'}`}>
-                              {result.consensus.agreement ? 'Yes' : 'No'}
-                            </div>
-                          </div>
-                          <div className="p-2 rounded-lg surface-inset">
-                            <div className="text-[9px] t-dim uppercase tracking-wider">Disagreement</div>
-                            <div className={`text-sm font-bold mt-1 ${result.consensus.disagreement_score > 0.15 ? 'text-red-400' : result.consensus.disagreement_score > 0.05 ? 'text-yellow-400' : 'text-green-400'}`}>
-                              {(result.consensus.disagreement_score * 100).toFixed(1)}%
-                            </div>
-                          </div>
-                          <div className="p-2 rounded-lg surface-inset">
-                            <div className="text-[9px] t-dim uppercase tracking-wider">Stability</div>
-                            <div className={`text-sm font-bold mt-1 ${result.consensus.confidence_stable ? 'text-green-400' : 'text-yellow-400'}`}>
-                              {result.consensus.confidence_stable ? 'Stable' : 'Unstable'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Alternative warning */}
-                        {result.consensus.alternative && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 1.4 }}
-                            className="mt-3 p-3 rounded-xl bg-red-500/[0.06] border border-red-500/15 text-xs"
-                          >
-                            <div className="flex items-start gap-2">
-                              <FiAlertTriangle size={12} className="text-red-400 mt-0.5 shrink-0" />
-                              <div>
-                                <span className="font-semibold text-red-400">⚠ AI Uncertainty Detected: </span>
-                                <span className="t-secondary">
-                                  Second opinion model suggests <span className="font-semibold capitalize text-red-400">{result.consensus.alternative.species}</span> ({(result.consensus.alternative.confidence * 100).toFixed(1)}%).
-                                  Species may be visually similar. Manual verification recommended.
-                                </span>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </motion.div>
-                    )}
-
-                    {/* Top predictions — cinematic stagger reveal */}
-                    {result.top3 && (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>
-                        <h3 className="text-xs font-semibold mb-3 uppercase tracking-wider flex items-center gap-2 t-tertiary">
-                          <FiActivity size={12} /> Probability Distribution
-                        </h3>
-                        <div className="space-y-2">
-                          {result.top3.map((item, i) => {
-                            const isTop = i === 0;
-                            const barColor = isTop
-                              ? (result.is_unknown ? 'bg-gradient-to-r from-amber-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-amber-500')
-                              : '';
-                            const barStyle = isTop ? {} : { background: 'var(--text-dim)' };
-                            return (
-                              <motion.div key={item.class} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2 + i * 0.12, type: 'spring', stiffness: 200 }}
-                                className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${isTop ? 'bg-orange-500/5 border border-orange-500/10' : 'surface-inset surface-hover'}`}>
-                                <span className={`text-xs font-bold w-7 h-7 rounded-lg flex items-center justify-center ${isTop ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm' : 'surface-inset t-secondary'}`}>
-                                  #{i + 1}
-                                </span>
-                                <span className={`capitalize flex-1 font-medium text-sm ${isTop ? 'text-orange-500' : ''}`}>{item.class}</span>
-                                <span className={`font-mono text-sm font-semibold tabular-nums ${isTop ? 'text-orange-500' : ''}`}>{(item.confidence * 100).toFixed(1)}%</span>
-                                <div className="w-24 h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
-                                  <motion.div initial={{ width: 0 }} animate={{ width: `${item.confidence * 100}%` }} transition={{ duration: 0.8, delay: 1.2 + i * 0.12 }}
-                                    className={`h-full rounded-full ${barColor}`} style={barStyle} />
+                          {/* Dual model comparison */}
+                          <div className="grid grid-cols-2 gap-3 mb-4">
+                            {/* Primary Model */}
+                            <div className="p-3 rounded-xl surface-inset">
+                              <div className="text-[10px] t-dim uppercase tracking-wider font-semibold mb-1.5">Primary — TTA Path</div>
+                              <div className="text-sm font-bold capitalize">{result.consensus.primary_prediction}</div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${result.consensus.primary_confidence * 100}%` }}
+                                    transition={{ delay: 1.1, duration: 0.8 }}
+                                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500"
+                                  />
                                 </div>
-                              </motion.div>
-                            );
-                          })}
+                                <span className="text-xs font-mono font-bold text-orange-500">{(result.consensus.primary_confidence * 100).toFixed(1)}%</span>
+                              </div>
+                            </div>
+
+                            {/* Second Opinion */}
+                            <div className="p-3 rounded-xl surface-inset">
+                              <div className="text-[10px] t-dim uppercase tracking-wider font-semibold mb-1.5">Second Opinion</div>
+                              <div className={`text-sm font-bold capitalize ${!result.consensus.agreement ? 'text-red-400' : ''}`}>
+                                {result.consensus.second_opinion_prediction}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${result.consensus.second_opinion_confidence * 100}%` }}
+                                    transition={{ delay: 1.2, duration: 0.8 }}
+                                    className={`h-full rounded-full ${result.consensus.agreement ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : 'bg-gradient-to-r from-red-500 to-pink-500'}`}
+                                  />
+                                </div>
+                                <span className={`text-xs font-mono font-bold ${result.consensus.agreement ? 'text-blue-500' : 'text-red-400'}`}>
+                                  {(result.consensus.second_opinion_confidence * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Metrics row */}
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="p-2 rounded-lg surface-inset">
+                              <div className="text-[9px] t-dim uppercase tracking-wider">Agreement</div>
+                              <div className={`text-sm font-bold mt-1 ${result.consensus.agreement ? 'text-green-400' : 'text-red-400'}`}>
+                                {result.consensus.agreement ? 'Yes' : 'No'}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded-lg surface-inset">
+                              <div className="text-[9px] t-dim uppercase tracking-wider">Disagreement</div>
+                              <div className={`text-sm font-bold mt-1 ${result.consensus.disagreement_score > 0.15 ? 'text-red-400' : result.consensus.disagreement_score > 0.05 ? 'text-yellow-400' : 'text-green-400'}`}>
+                                {(result.consensus.disagreement_score * 100).toFixed(1)}%
+                              </div>
+                            </div>
+                            <div className="p-2 rounded-lg surface-inset">
+                              <div className="text-[9px] t-dim uppercase tracking-wider">Stability</div>
+                              <div className={`text-sm font-bold mt-1 ${result.consensus.confidence_stable ? 'text-green-400' : 'text-yellow-400'}`}>
+                                {result.consensus.confidence_stable ? 'Stable' : 'Unstable'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Alternative warning */}
+                          {result.consensus.alternative && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 1.4 }}
+                              className="mt-3 p-3 rounded-xl bg-red-500/[0.06] border border-red-500/15 text-xs"
+                            >
+                              <div className="flex items-start gap-2">
+                                <FiAlertTriangle size={12} className="text-red-400 mt-0.5 shrink-0" />
+                                <div>
+                                  <span className="font-semibold text-red-400">⚠ AI Uncertainty Detected: </span>
+                                  <span className="t-secondary">
+                                    Second opinion model suggests <span className="font-semibold capitalize text-red-400">{result.consensus.alternative.species}</span> ({(result.consensus.alternative.confidence * 100).toFixed(1)}%).
+                                    Species may be visually similar. Manual verification recommended.
+                                  </span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+
+                      {/* Top predictions — cinematic stagger reveal */}
+                      {result.top3 && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>
+                          <h3 className="text-xs font-semibold mb-3 uppercase tracking-wider flex items-center gap-2 t-tertiary">
+                            <FiActivity size={12} /> Probability Distribution
+                          </h3>
+                          <div className="space-y-2">
+                            {result.top3.map((item, i) => {
+                              const isTop = i === 0;
+                              const barColor = isTop
+                                ? (result.is_unknown ? 'bg-gradient-to-r from-amber-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-amber-500')
+                                : '';
+                              const barStyle = isTop ? {} : { background: 'var(--text-dim)' };
+                              return (
+                                <motion.div key={item.class} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2 + i * 0.12, type: 'spring', stiffness: 200 }}
+                                  className={`flex items-center gap-3 p-3 rounded-xl transition-all group ${isTop ? 'bg-orange-500/5 border border-orange-500/10' : 'surface-inset surface-hover'}`}>
+                                  <span className={`text-xs font-bold w-7 h-7 rounded-lg flex items-center justify-center ${isTop ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm' : 'surface-inset t-secondary'}`}>
+                                    #{i + 1}
+                                  </span>
+                                  <span className={`capitalize flex-1 font-medium text-sm ${isTop ? 'text-orange-500' : ''}`}>{item.class}</span>
+                                  <span className={`font-mono text-sm font-semibold tabular-nums ${isTop ? 'text-orange-500' : ''}`}>{(item.confidence * 100).toFixed(1)}%</span>
+                                  <div className="w-24 h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--bg-surface-2)' }}>
+                                    <motion.div initial={{ width: 0 }} animate={{ width: `${item.confidence * 100}%` }} transition={{ duration: 0.8, delay: 1.2 + i * 0.12 }}
+                                      className={`h-full rounded-full ${barColor}`} style={barStyle} />
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Animal info */}
+                      {result.animal_info?.description && (
+                        <div className="p-4 rounded-xl text-sm bg-blue-500/10 border border-blue-500/20 text-blue-500">
+                          <div className="font-semibold mb-1">About this species</div>
+                          {result.animal_info.description}
                         </div>
-                      </motion.div>
-                    )}
+                      )}
 
-                    {/* Animal info */}
-                    {result.animal_info?.description && (
-                      <div className="p-4 rounded-xl text-sm bg-blue-500/10 border border-blue-500/20 text-blue-500">
-                        <div className="font-semibold mb-1">About this species</div>
-                        {result.animal_info.description}
-                      </div>
-                    )}
+                      {/* Actionable Insight */}
+                      <ResultInsight result={result} />
 
-                    {/* Actionable Insight */}
-                    <ResultInsight result={result} />
+                      {/* Download PDF Report */}
+                      <motion.button whileHover={{ scale: 1.02, y: -2, boxShadow: '0 8px 30px rgba(249,115,22,0.3)' }} whileTap={{ scale: 0.98 }}
+                        onClick={async () => {
+                          try {
+                            const res = await api.generateReport(file || new File([await (await fetch(preview)).blob()], 'footprint.jpg'));
+                            const url = URL.createObjectURL(res.data);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = `wildtrack_report.pdf`; a.click();
+                            URL.revokeObjectURL(url);
+                          } catch (e) { /* report generation failed */ }
+                        }}
+                        className="w-full py-3.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all">
+                        <FiDownload size={16} /> Download PDF Report
+                      </motion.button>
 
-                    {/* Download PDF Report */}
-                    <motion.button whileHover={{ scale: 1.02, y: -2, boxShadow: '0 8px 30px rgba(249,115,22,0.3)' }} whileTap={{ scale: 0.98 }}
-                      onClick={async () => {
-                        try {
-                          const res = await api.generateReport(file || new File([await (await fetch(preview)).blob()], 'footprint.jpg'));
-                          const url = URL.createObjectURL(res.data);
-                          const a = document.createElement('a');
-                          a.href = url; a.download = `wildtrack_report.pdf`; a.click();
-                          URL.revokeObjectURL(url);
-                        } catch (e) { /* report generation failed */ }
-                      }}
-                      className="w-full py-3.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all">
-                      <FiDownload size={16} /> Download PDF Report
-                    </motion.button>
-
-                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                      onClick={reset} className="w-full py-3 rounded-xl text-sm font-medium border transition b-primary surface-hover">
-                      Upload Another Footprint
-                    </motion.button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                        onClick={reset} className="w-full py-3 rounded-xl text-sm font-medium border transition b-primary surface-hover">
+                        Upload Another Footprint
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </div>
+    </>
   );
 }
