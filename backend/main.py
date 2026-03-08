@@ -733,6 +733,9 @@ def preprocess_image(file_bytes, target_size=None):
     # Intelligent resize
     img = intelligent_resize(img, target_size)
     
+    # IMPORTANT BUG FIX: Convert BGR (OpenCV) to RGB (TensorFlow model expectation)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
     # Prepare for model
     img_array = img.astype('float32')
     img_array = np.expand_dims(img_array, axis=0)
