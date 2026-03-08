@@ -75,10 +75,10 @@ export default function LoginPage() {
           loop
           muted
           playsInline
-          className="absolute min-w-full min-h-full object-cover opacity-40 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="absolute min-w-full min-h-full object-cover opacity-30 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         >
-          {/* Reliable high-quality abstract dark tech video from Pexels */}
-          <source src="https://cdn.pixabay.com/video/2020/07/22/45366-443144893_large.mp4" type="video/mp4" />
+          {/* 100% reliable public demo video of wild elephants */}
+          <source src="https://res.cloudinary.com/demo/video/upload/elephants.mp4" type="video/mp4" />
         </video>
         {/* Dark Overlays for perfect readability & vignette edge */}
         <div className="absolute inset-0 bg-black/50" />
