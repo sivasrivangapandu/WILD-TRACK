@@ -11,7 +11,7 @@ export default function LoginPage() {
   const location = useLocation();
   const { user, login, register } = useAuth();
   const { theme } = useTheme();
-  
+
   const [mode, setMode] = useState('login');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +36,7 @@ export default function LoginPage() {
       duration: Math.random() * 14 + 12,
       delay: Math.random() * 4,
     })),
-  []);
+    []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ export default function LoginPage() {
       } else {
         await register(formData.name, formData.email, formData.password);
       }
-      
+
       const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } catch (err) {
@@ -94,14 +94,14 @@ export default function LoginPage() {
       ))}
 
       {/* Soft Gradient Orbs */}
-      <div className="absolute top-0 left-0 w-80 h-80 rounded-full blur-3xl opacity-10" 
-           style={{ background: `radial-gradient(circle, ${theme.primary}, transparent)` }} />
-      <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full blur-3xl opacity-10" 
-           style={{ background: `radial-gradient(circle, ${theme.secondary}, transparent)` }} />
+      <div className="absolute top-0 left-0 w-80 h-80 rounded-full blur-3xl opacity-10"
+        style={{ background: `radial-gradient(circle, ${theme.primary}, transparent)` }} />
+      <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full blur-3xl opacity-10"
+        style={{ background: `radial-gradient(circle, ${theme.secondary}, transparent)` }} />
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">"
-        
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+
         {/* Left Side - Branding */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -120,7 +120,7 @@ export default function LoginPage() {
             WildTrackAI
           </h1>
           <p className="text-base text-gray-400 mb-10 leading-relaxed max-w-md">
-            Identify wildlife species instantly with cutting-edge AI. 
+            Identify wildlife species instantly with cutting-edge AI.
             Upload a photo and get accurate predictions in seconds.
           </p>
 
@@ -135,7 +135,7 @@ export default function LoginPage() {
                 className="flex items-center gap-3"
               >
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
-                     style={{ backgroundColor: theme.primary + '18' }}>
+                  style={{ backgroundColor: theme.primary + '18' }}>
                   {feature.icon}
                 </div>
                 <span className="text-gray-300 text-sm">{feature.text}</span>
@@ -167,7 +167,7 @@ export default function LoginPage() {
           <div className="relative">
             {/* Glass Card — clean, no infinite glow */}
             <div className="relative bg-white/[0.04] backdrop-blur-xl rounded-2xl p-8 border border-white/[0.08] shadow-2xl"
-                 style={{ boxShadow: `0 0 80px ${theme.primary}08` }}>
+              style={{ boxShadow: `0 0 80px ${theme.primary}08` }}>
 
               {/* Mode Toggle */}
               <div className="flex gap-1 mb-7 p-1 bg-white/[0.04] rounded-xl border border-white/[0.06]">
