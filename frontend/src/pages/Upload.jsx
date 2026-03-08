@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUpload, FiX, FiImage, FiActivity, FiEye, FiCheckCircle, FiAlertTriangle, FiCpu, FiDownload, FiTarget, FiInfo, FiHelpCircle, FiGrid, FiCrosshair, FiMaximize2, FiLayers, FiNavigation } from 'react-icons/fi';
@@ -395,14 +395,14 @@ export default function UploadPage() {
   // GPS Location state
   const [location, setLocation] = useState(null);
 
-  // Background Videos mapping — using reliable CDN sources
-  const SPECIES_VIDEOS = {
-    tiger: "https://videos.pexels.com/video-files/5548422/5548422-uhd_2560_1440_25fps.mp4",
-    elephant: "https://res.cloudinary.com/demo/video/upload/elephants.mp4",
-    leopard: "https://videos.pexels.com/video-files/6394054/6394054-uhd_2732_1440_25fps.mp4",
-    deer: "https://videos.pexels.com/video-files/4763824/4763824-uhd_2560_1440_25fps.mp4",
-    wolf: "https://videos.pexels.com/video-files/5618358/5618358-uhd_2560_1440_25fps.mp4",
-    default: "https://res.cloudinary.com/demo/video/upload/elephants.mp4"
+  // Animated gradient backgrounds per species — no external CDN needed, 100% reliable
+  const SPECIES_BACKGROUNDS = {
+    tiger: { colors: ['#ff6a00', '#ee0979', '#ff6a00', '#ffd500'], overlay: 'radial-gradient(ellipse at 30% 50%, rgba(255,106,0,0.3) 0%, transparent 70%)' },
+    elephant: { colors: ['#2c3e50', '#3498db', '#1a5276', '#2c3e50'], overlay: 'radial-gradient(ellipse at 70% 40%, rgba(52,152,219,0.3) 0%, transparent 70%)' },
+    leopard: { colors: ['#f7971e', '#ffd200', '#f7971e', '#e65100'], overlay: 'radial-gradient(ellipse at 50% 60%, rgba(247,151,30,0.3) 0%, transparent 70%)' },
+    deer: { colors: ['#2d5016', '#4a7c23', '#2d5016', '#1b5e20'], overlay: 'radial-gradient(ellipse at 40% 30%, rgba(74,124,35,0.3) 0%, transparent 70%)' },
+    wolf: { colors: ['#434343', '#6b7b8d', '#2c3e50', '#434343'], overlay: 'radial-gradient(ellipse at 60% 50%, rgba(107,123,141,0.3) 0%, transparent 70%)' },
+    default: { colors: ['#0f2027', '#203a43', '#2c5364', '#0f2027'], overlay: 'radial-gradient(ellipse at 50% 50%, rgba(44,83,100,0.2) 0%, transparent 70%)' },
   };
 
   // Attempt to get GPS on component mount
@@ -487,21 +487,12 @@ export default function UploadPage() {
     return 'confidence-glow-red';
   }, [result]);
 
-  // Video loaded state
-  const [videoReady, setVideoReady] = useState(false);
-  const videoRef = useRef(null);
-
-  // When result changes, reset video ready state
+  // Dynamically make Layout background transparent when showing animated background
   useEffect(() => {
-    setVideoReady(false);
-  }, [result?.species]);
-
-  // Dynamically make Layout background transparent when video is active
-  useEffect(() => {
-    const showVideo = result && !result.is_unknown && videoReady;
+    const showBg = result && !result.is_unknown;
     const layoutRoot = document.querySelector('.min-h-screen.transition-colors');
     const mainEl = document.querySelector('main');
-    if (showVideo) {
+    if (showBg) {
       if (layoutRoot) layoutRoot.style.backgroundColor = 'transparent';
       if (mainEl) mainEl.style.backgroundColor = 'transparent';
       document.body.style.backgroundColor = '#000';
@@ -511,46 +502,62 @@ export default function UploadPage() {
       if (mainEl) mainEl.style.backgroundColor = '';
       document.body.style.backgroundColor = '';
     };
-  }, [result, videoReady]);
+  }, [result]);
 
-  const videoSrc = result ? (SPECIES_VIDEOS[result.species?.toLowerCase()] || SPECIES_VIDEOS.default) : null;
+  const speciesBg = result ? (SPECIES_BACKGROUNDS[result.species?.toLowerCase()] || SPECIES_BACKGROUNDS.default) : null;
+
+  // Inject keyframe animation for gradient shift
+  useEffect(() => {
+    const styleId = 'wildtrack-gradient-anim';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes wildtrack-gradient-shift {
+          0% { background-position: 0% 50%; }
+          25% { background-position: 50% 100%; }
+          50% { background-position: 100% 50%; }
+          75% { background-position: 50% 0%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes wildtrack-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.1); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   return (
     <>
-      {/* Dynamic Background Video — rendered via Portal at body level to escape Layout's opaque bg */}
-      {result && !result.is_unknown && videoSrc && createPortal(
+      {/* Dynamic Animated Background — rendered via Portal at body level */}
+      {result && !result.is_unknown && speciesBg && createPortal(
         <AnimatePresence mode="wait">
           <motion.div
             key={result.species}
             initial={{ opacity: 0 }}
-            animate={{ opacity: videoReady ? 1 : 0 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', background: '#000' }}
+            transition={{ duration: 1.2, ease: 'easeInOut' }}
+            style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden' }}
           >
-            <video
-              ref={videoRef}
-              autoPlay
-              loop
-              muted
-              playsInline
-              onLoadedData={() => setVideoReady(true)}
-              style={{
-                position: 'absolute',
-                minWidth: '100%',
-                minHeight: '100%',
-                objectFit: 'cover',
-                opacity: 0.6,
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-              }}
-            >
-              <source src={videoSrc} type="video/mp4" />
-            </video>
-            {/* Dark overlays for readability */}
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a0a0a, transparent)' }} />
+            {/* Animated gradient base */}
+            <div style={{
+              position: 'absolute', inset: '-50%', width: '200%', height: '200%',
+              background: `linear-gradient(135deg, ${speciesBg.colors.join(', ')})`,
+              backgroundSize: '400% 400%',
+              animation: 'wildtrack-gradient-shift 8s ease infinite',
+            }} />
+            {/* Pulsing radial overlay */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: speciesBg.overlay,
+              animation: 'wildtrack-pulse 4s ease-in-out infinite',
+            }} />
+            {/* Dark overlay for readability */}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent 60%)' }} />
           </motion.div>
         </AnimatePresence>,
         document.body
