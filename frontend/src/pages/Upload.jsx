@@ -394,14 +394,14 @@ export default function UploadPage() {
   // GPS Location state
   const [location, setLocation] = useState(null);
 
-  // Background Videos mapping
+  // Background Videos mapping — using reliable CDN sources
   const SPECIES_VIDEOS = {
-    tiger: "https://res.cloudinary.com/demo/video/upload/tiger.mp4",
+    tiger: "https://videos.pexels.com/video-files/5548422/5548422-uhd_2560_1440_25fps.mp4",
     elephant: "https://res.cloudinary.com/demo/video/upload/elephants.mp4",
-    leopard: "https://cdn.pixabay.com/video/2021/08/11/84687-586718423_large.mp4", // Leopard
-    deer: "https://cdn.pixabay.com/video/2019/04/23/22934-331668478_large.mp4",  // Deer in forest
-    wolf: "https://cdn.pixabay.com/video/2020/03/17/33827-399088686_large.mp4",  // Wolf in snow
-    default: "https://cdn.pixabay.com/video/2020/07/22/45366-443144893_large.mp4"
+    leopard: "https://videos.pexels.com/video-files/6394054/6394054-uhd_2732_1440_25fps.mp4",
+    deer: "https://videos.pexels.com/video-files/4763824/4763824-uhd_2560_1440_25fps.mp4",
+    wolf: "https://videos.pexels.com/video-files/5618358/5618358-uhd_2560_1440_25fps.mp4",
+    default: "https://res.cloudinary.com/demo/video/upload/elephants.mp4"
   };
 
   // Attempt to get GPS on component mount

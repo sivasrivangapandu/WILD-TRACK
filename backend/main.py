@@ -671,27 +671,31 @@ def intelligent_resize(image, target_size=300):
 
 
 def preprocess_image(file_bytes, target_size=None):
-    """Preprocess uploaded image with research-grade robustness.
+    """Preprocess uploaded image to EXACTLY match the training pipeline.
     
-    Pipeline:
+    CRITICAL: The model was trained with tf.data using:
+        tf.image.decode_image → tf.image.resize → tf.cast(float32)
+    
+    Any additional preprocessing (CLAHE, edge sharpening, gamma correction)
+    creates a domain gap that destroys prediction accuracy.
+    
+    Pipeline (matches training):
     1. Decode image from bytes
-    2. Detect blur and log quality metrics
-    3. Calculate perceptual hash (pHash)
-    4. Apply CLAHE contrast normalization
-    5. Enhance edges for footprint clarity
-    6. Stage 1: YOLO Object Detection (crop to footprint)
-    7. Intelligently resize with aspect ratio preservation
+    2. Collect quality metrics (blur, pHash) for UI — does NOT modify the image
+    3. Convert BGR → RGB (OpenCV decodes BGR, TF trained on RGB)
+    4. Resize to target_size × target_size (simple resize, no padding)
+    5. Cast to float32 [0, 255]
     
     Returns:
-        - img_array: preprocessed image (1, H, W, 3) float32
-        - original: original decoded image
-        - quality_metrics: dict with blur_level, is_blurry, processing_applied, phash
-        - stage1_meta: dict with YOLO cropping results
+        - img_array: preprocessed image (1, H, W, 3) float32 RGB
+        - original: original decoded image (BGR, for GradCAM/display)
+        - quality_metrics: dict with blur_level, is_blurry, phash
+        - stage1_meta: dict with YOLO cropping results (if available)
     """
     if target_size is None:
         target_size = IMG_SIZE
 
-    # Decode image
+    # Decode image (OpenCV gives BGR)
     nparr = np.frombuffer(file_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
@@ -699,7 +703,7 @@ def preprocess_image(file_bytes, target_size=None):
 
     original = img.copy()
     
-    # Quality metrics
+    # ── Quality metrics (for UI display only — does NOT modify the image) ──
     quality_metrics = {}
     
     # Perceptual hash
@@ -707,7 +711,7 @@ def preprocess_image(file_bytes, target_size=None):
     quality_metrics['phash'] = phash
     quality_metrics['is_duplicate'] = pipeline.check_duplicate(phash)
 
-    # Detect blur (Using pipeline method)
+    # Detect blur
     blur_level, is_blurry = pipeline.detect_blur(img)
     quality_metrics['blur_level'] = float(blur_level)
     quality_metrics['is_blurry'] = bool(is_blurry)
@@ -718,25 +722,20 @@ def preprocess_image(file_bytes, target_size=None):
         quality_metrics['quality_warning'] = warning_msg
         quality_metrics['quality_severity'] = warning_severity
     
-    # Apply brightness correction for dark images
-    img, gamma_applied = correct_brightness_gamma(img)
-    quality_metrics['gamma_applied'] = gamma_applied
+    quality_metrics['gamma_applied'] = False
+    quality_metrics['processing_applied'] = False
     
-    # Apply preprocessing only if not too blurry
-    img = normalize_contrast(img)
-    img = enhance_edges(img)
-    quality_metrics['processing_applied'] = True
-    
-    # Stage 1: YOLO Object Detection & Crop
+    # Stage 1: YOLO Object Detection & Crop (operate on BGR)
     img, stage1_meta = pipeline.stage1_detect_and_crop(img)
     
-    # Intelligent resize
-    img = intelligent_resize(img, target_size)
-    
-    # IMPORTANT BUG FIX: Convert BGR (OpenCV) to RGB (TensorFlow model expectation)
+    # ── Match training pipeline exactly ──
+    # Step 1: Convert BGR (OpenCV) → RGB (TensorFlow training used tf.image.decode_image which gives RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # Prepare for model
+    # Step 2: Simple resize to target_size × target_size (training used tf.image.resize)
+    img = cv2.resize(img, (target_size, target_size), interpolation=cv2.INTER_LINEAR)
+    
+    # Step 3: Cast to float32 (training used tf.cast(img, tf.float32) keeping [0, 255] range)
     img_array = img.astype('float32')
     img_array = np.expand_dims(img_array, axis=0)
 
