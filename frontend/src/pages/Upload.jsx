@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUpload, FiX, FiImage, FiActivity, FiEye, FiCheckCircle, FiAlertTriangle, FiCpu, FiDownload, FiTarget, FiInfo, FiHelpCircle, FiGrid, FiCrosshair, FiMaximize2, FiLayers, FiNavigation } from 'react-icons/fi';
 import { GiPawPrint, GiFootprint, GiClawSlashes } from 'react-icons/gi';
@@ -486,35 +487,74 @@ export default function UploadPage() {
     return 'confidence-glow-red';
   }, [result]);
 
+  // Video loaded state
+  const [videoReady, setVideoReady] = useState(false);
+  const videoRef = useRef(null);
+
+  // When result changes, reset video ready state
+  useEffect(() => {
+    setVideoReady(false);
+  }, [result?.species]);
+
+  // Dynamically make Layout background transparent when video is active
+  useEffect(() => {
+    const showVideo = result && !result.is_unknown && videoReady;
+    const layoutRoot = document.querySelector('.min-h-screen.transition-colors');
+    const mainEl = document.querySelector('main');
+    if (showVideo) {
+      if (layoutRoot) layoutRoot.style.backgroundColor = 'transparent';
+      if (mainEl) mainEl.style.backgroundColor = 'transparent';
+      document.body.style.backgroundColor = '#000';
+    }
+    return () => {
+      if (layoutRoot) layoutRoot.style.backgroundColor = '';
+      if (mainEl) mainEl.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
+    };
+  }, [result, videoReady]);
+
+  const videoSrc = result ? (SPECIES_VIDEOS[result.species?.toLowerCase()] || SPECIES_VIDEOS.default) : null;
+
   return (
     <>
-      {/* Dynamic Background Video */}
-      <AnimatePresence mode="wait">
-        {result && !result.is_unknown && (
+      {/* Dynamic Background Video — rendered via Portal at body level to escape Layout's opaque bg */}
+      {result && !result.is_unknown && videoSrc && createPortal(
+        <AnimatePresence mode="wait">
           <motion.div
             key={result.species}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: videoReady ? 1 : 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="fixed inset-0 z-0 overflow-hidden bg-black"
+            style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', background: '#000' }}
           >
             <video
+              ref={videoRef}
               autoPlay
               loop
               muted
               playsInline
-              className="absolute min-w-full min-h-full object-cover opacity-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+              onLoadedData={() => setVideoReady(true)}
+              style={{
+                position: 'absolute',
+                minWidth: '100%',
+                minHeight: '100%',
+                objectFit: 'cover',
+                opacity: 0.6,
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
             >
-              <source src={SPECIES_VIDEOS[result.species?.toLowerCase()] || SPECIES_VIDEOS.default} type="video/mp4" />
+              <source src={videoSrc} type="video/mp4" />
             </video>
-            {/* Elegant dark overlays to ensure the app UI remains fully readable */}
-            <div className="absolute inset-0 bg-black/60" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[#0a0a0a]/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-transparent to-[#0a0a0a] opacity-90" />
+            {/* Dark overlays for readability */}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a0a0a, transparent)' }} />
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
 
       <div className="max-w-5xl mx-auto space-y-6 relative z-10 transition-colors duration-1000">
         <div className="flex items-center gap-3 mb-2">
