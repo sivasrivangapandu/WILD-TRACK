@@ -69,21 +69,21 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center overflow-hidden relative" style={{ backgroundColor: theme.bg }}>
 
       {/* Background Animated Video */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden bg-black">
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute min-w-full min-h-full object-cover opacity-30 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="absolute min-w-full min-h-full object-cover opacity-70 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         >
           {/* 100% reliable public demo video of wild elephants */}
           <source src="https://res.cloudinary.com/demo/video/upload/elephants.mp4" type="video/mp4" />
         </video>
         {/* Dark Overlays for perfect readability & vignette edge */}
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 opacity-80" />
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-transparent to-black/80" />
       </div>
 
       {/* Animated Particles */}
