@@ -497,7 +497,7 @@ export default function UploadPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="fixed inset-0 z-[-1] overflow-hidden bg-black"
+            className="fixed inset-0 z-0 overflow-hidden bg-black"
           >
             <video
               autoPlay
