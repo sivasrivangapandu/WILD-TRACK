@@ -437,15 +437,22 @@ export default function UploadPage() {
     if (!file) return;
     updateState({ loading: true, error: null });
     try {
-      // Create FormData to append GPS if available
+      // Create FormData
       const formData = new FormData();
       formData.append('file', file);
+
+      // NOTE: We are NOT sending GPS coordinates by default anymore. 
+      // The backend geo-filter will zero-out probabilities for animals 
+      // that don't live in the user's location (e.g. elephants in North America).
+      // Since users test with images from the internet, this causes "incorrect" predictions.
+      /*
       if (location) {
         formData.append('latitude', location.lat);
         formData.append('longitude', location.lng);
       }
+      */
 
-      const resData = await api.predict(file, location);
+      const resData = await api.predict(file, null); // Skip location parameter in api wrapper too
       updateState({ result: resData.data });
     } catch (err) {
       updateState({ error: err.message || 'Prediction failed' });
