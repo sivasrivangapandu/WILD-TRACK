@@ -67,6 +67,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center overflow-hidden relative" style={{ backgroundColor: theme.bg }}>
+
+      {/* Background Animated Video */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover opacity-60 mix-blend-screen"
+        >
+          {/* A beautiful dark, elegant fluid/smoke abstract video perfect for tech/AI */}
+          <source src="https://assets.codepen.io/3364143/7btrrd.mp4" type="video/mp4" />
+        </video>
+        {/* Dark Overlays for perfect readability & vignette edge */}
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/60 opacity-80" />
+      </div>
+
       {/* Animated Particles */}
       {particles.map((particle) => (
         <motion.div
