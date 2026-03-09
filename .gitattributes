@@ -1,3 +1,2 @@
 backend/models/**/*.h5 filter=lfs diff=lfs merge=lfs -text
 backend/models/*.h5 filter=lfs diff=lfs merge=lfs -text
-backend/dataset_review.html filter=lfs diff=lfs merge=lfs -text
