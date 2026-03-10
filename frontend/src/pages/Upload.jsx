@@ -395,14 +395,46 @@ export default function UploadPage() {
   // GPS Location state
   const [location, setLocation] = useState(null);
 
+  // Rich nature patterns for background depth
+  const NATURE_PATTERNS = {
+    forest: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 50 Q30 30 50 30 Q70 30 70 50 Q70 70 50 70 Q30 70 30 50 M50 30 L50 10 M30 50 L10 50 M70 50 L90 50 M50 70 L50 90' stroke='rgba(255,255,255,0.03)' fill='none' stroke-width='1'/%3E%3C/svg%3E")`,
+    elephant_tracks: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M60 20 C40 20 20 40 20 65 C20 90 40 110 60 110 C80 110 100 90 100 65 C100 40 80 20 60 20' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='40' cy='35' r='5' fill='rgba(255,255,255,0.01)'/%3E%3Ccircle cx='60' cy='30' r='5' fill='rgba(255,255,255,0.01)'/%3E%3Ccircle cx='80' cy='35' r='5' fill='rgba(255,255,255,0.01)'/%3E%3C/svg%3E")`,
+    tiger_tracks: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 40 C30 40 20 60 40 80 C60 100 80 80 80 60 C80 40 70 40 50 40' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='30' cy='30' r='8' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='45' cy='20' r='8' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='65' cy='25' r='8' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='75' cy='45' r='8' fill='rgba(255,255,255,0.02)'/%3E%3C/svg%3E")`,
+    leopard_tracks: `url("data:image/svg+xml,%3Csvg width='90' height='90' viewBox='0 0 90 90' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M45 40 C30 40 25 55 40 70 C55 85 70 70 70 55 C70 40 60 40 45 40' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='30' cy='30' r='6' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='42' cy='20' r='6' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='60' cy='22' r='6' fill='rgba(255,255,255,0.02)'/%3E%3Ccircle cx='70' cy='40' r='6' fill='rgba(255,255,255,0.02)'/%3E%3C/svg%3E")`
+  };
+
   // Animated gradient backgrounds per species — no external CDN needed, 100% reliable
   const SPECIES_BACKGROUNDS = {
-    tiger: { colors: ['#ff6a00', '#ee0979', '#ff6a00', '#ffd500'], overlay: 'radial-gradient(ellipse at 30% 50%, rgba(255,106,0,0.3) 0%, transparent 70%)' },
-    elephant: { colors: ['#2c3e50', '#3498db', '#1a5276', '#2c3e50'], overlay: 'radial-gradient(ellipse at 70% 40%, rgba(52,152,219,0.3) 0%, transparent 70%)' },
-    leopard: { colors: ['#f7971e', '#ffd200', '#f7971e', '#e65100'], overlay: 'radial-gradient(ellipse at 50% 60%, rgba(247,151,30,0.3) 0%, transparent 70%)' },
-    deer: { colors: ['#2d5016', '#4a7c23', '#2d5016', '#1b5e20'], overlay: 'radial-gradient(ellipse at 40% 30%, rgba(74,124,35,0.3) 0%, transparent 70%)' },
-    wolf: { colors: ['#434343', '#6b7b8d', '#2c3e50', '#434343'], overlay: 'radial-gradient(ellipse at 60% 50%, rgba(107,123,141,0.3) 0%, transparent 70%)' },
-    default: { colors: ['#0f2027', '#203a43', '#2c5364', '#0f2027'], overlay: 'radial-gradient(ellipse at 50% 50%, rgba(44,83,100,0.2) 0%, transparent 70%)' },
+    tiger: {
+      colors: ['#ff6a00', '#ee0979', '#ff6a00', '#ffd500'],
+      overlay: 'radial-gradient(ellipse at 30% 50%, rgba(255,106,0,0.3) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.tiger_tracks
+    },
+    elephant: {
+      colors: ['#2c3e50', '#3498db', '#1a5276', '#2c3e50'],
+      overlay: 'radial-gradient(ellipse at 70% 40%, rgba(52,152,219,0.3) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.elephant_tracks
+    },
+    leopard: {
+      colors: ['#f7971e', '#ffd200', '#f7971e', '#e65100'],
+      overlay: 'radial-gradient(ellipse at 50% 60%, rgba(247,151,30,0.3) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.leopard_tracks
+    },
+    deer: {
+      colors: ['#2d5016', '#4a7c23', '#2d5016', '#1b5e20'],
+      overlay: 'radial-gradient(ellipse at 40% 30%, rgba(74,124,35,0.3) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.forest
+    },
+    wolf: {
+      colors: ['#434343', '#6b7b8d', '#2c3e50', '#434343'],
+      overlay: 'radial-gradient(ellipse at 60% 50%, rgba(107,123,141,0.3) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.tiger_tracks
+    },
+    default: {
+      colors: ['#0f2027', '#203a43', '#2c5364', '#0f2027'],
+      overlay: 'radial-gradient(ellipse at 50% 50%, rgba(44,83,100,0.2) 0%, transparent 70%)',
+      pattern: NATURE_PATTERNS.forest
+    },
   };
 
   // Attempt to get GPS on component mount
@@ -442,8 +474,8 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // NOTE: We are NOT sending GPS coordinates by default anymore. 
-      // The backend geo-filter will zero-out probabilities for animals 
+      // NOTE: We are NOT sending GPS coordinates by default anymore.
+      // The backend geo-filter will zero-out probabilities for animals
       // that don't live in the user's location (e.g. elephants in North America).
       // Since users test with images from the internet, this causes "incorrect" predictions.
       /*
@@ -487,10 +519,10 @@ export default function UploadPage() {
     return 'confidence-glow-red';
   }, [result]);
 
-  // Use injected <style> with !important to override Layout's React-managed inline styles
+  // Ultra-Aggressive Global Style Injection
   useEffect(() => {
     const showBg = result && !result.is_unknown;
-    const styleId = 'wildtrack-bg-override';
+    const styleId = 'wildtrack-animation-override';
     if (showBg) {
       let style = document.getElementById(styleId);
       if (!style) {
@@ -498,12 +530,16 @@ export default function UploadPage() {
         style.id = styleId;
         document.head.appendChild(style);
       }
-      style.textContent = `
-        body { background-color: #000 !important; }
-        .min-h-screen { background-color: transparent !important; }
-        main { background-color: transparent !important; }
-        #root > div { background-color: transparent !important; }
+      style.innerHTML = `
+        html, body, #root, #app-layout-root, .min-h-screen, main, [data-layout] {
+          background: transparent !important;
+          background-color: transparent !important;
+        }
+        [data-glow-bg] { opacity: 1 !important; }
       `;
+    } else {
+      const style = document.getElementById(styleId);
+      if (style) style.remove();
     }
     return () => {
       const style = document.getElementById(styleId);
@@ -556,15 +592,35 @@ export default function UploadPage() {
               backgroundSize: '400% 400%',
               animation: 'wildtrack-gradient-shift 8s ease infinite',
             }} />
+
+            {/* Nature Pattern Overlay */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: speciesBg.pattern,
+              opacity: 0.2, // Increased from 0.1
+              animation: 'wildtrack-gradient-shift 15s linear infinite', // Slightly faster for more life
+            }} />
+
             {/* Pulsing radial overlay */}
             <div style={{
               position: 'absolute', inset: 0,
               background: speciesBg.overlay,
               animation: 'wildtrack-pulse 4s ease-in-out infinite',
             }} />
-            {/* Dark overlay for readability */}
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent 60%)' }} />
+
+            {/* Grain effect for texture */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              opacity: 0.03,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              pointerEvents: 'none',
+            }} />
+
+            {/* Dark vignette to ensure readability */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.6) 100%)',
+            }} />
           </motion.div>
         </AnimatePresence>,
         document.body

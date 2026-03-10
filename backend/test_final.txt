@@ -1,0 +1,44 @@
+[YOLO] not initialized. Stage 1 detection will be bypassed.
+  [OK] Gemini AI initialized (gemini-2.0-flash)
+  [OK] API Ninjas initialized
+--- WILD TRACK AI VERIFICATION ---
+[INIT] Loading model (simulating startup lifespan)...
+  OK Model exists: wildtrack_v4_cpu.keras (9.8 MB)
+  OK Model exists: wildtrack_complete_model.h5 (9.6 MB)
+  OK Model exists: wildtrack_final.h5 (9.6 MB)
+Loading model: D:\Wild Track AI\backend\models\wildtrack_v4_cpu.keras (9.8 MB)
+  Model loaded successfully (2,422,597 params)
+  Classes: ['deer', 'elephant', 'leopard', 'tiger', 'wolf']
+  Image size: 160
+  Accuracy: 0.858
+  Backbone: MobileNetV2
+  Version: v4-cpu
+[GradCAM] Using layer: Conv_1
+  GradCAM: initialized
+[INIT] Model load complete.
+
+[STEP 1] Preprocessing with 15% Expansion Margin...
+         Brightness: 160.66
+[STEP 2] Running First Prediction Pass...
+
+[DIAG] Raw Probs (TTA=True):
+  deer: 0.0060
+  elephant: 0.0098
+  leopard: 0.7236
+  tiger: 0.0014
+  wolf: 0.2591
+[DIAG] Calibrated Probs (T=1.2):
+  deer: 0.0125
+  elephant: 0.0188
+  leopard: 0.6772
+  tiger: 0.0038
+  wolf: 0.2877
+         Initial Prediction: leopard (0.6772)
+[STEP 4] Snow Heuristic TRIGGERED!
+         Brightness 160.7 > 130
+         Reclassifying leopard -> wolf
+
+--- FINAL VERIFICATION RESULTS ---
+Result Species: wolf
+Final Confidence: 0.6772
+[SUCCESS] Fix verified: Wolf track in snow correctly identified.

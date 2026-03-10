@@ -33,7 +33,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen transition-colors duration-500" style={{ backgroundColor: theme.bg, color: theme.text }}>
+    <div id="app-layout-root" className="min-h-screen transition-colors duration-500" style={{ backgroundColor: theme.bg, color: theme.text }}>
       <AnimatedBackground />
       <Sidebar />
       <main className="lg:ml-60 min-h-screen transition-all duration-300 relative">

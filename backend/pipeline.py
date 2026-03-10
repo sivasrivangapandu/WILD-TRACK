@@ -41,13 +41,13 @@ class InferencePipeline:
             if YOLO_AVAILABLE and YOLO is not None:
                 try:
                     self.yolo_model = YOLO(yolo_model_path)
-                    print(f"✅ YOLO Object Detector initialized: {yolo_model_path}")
+                    print(f"[YOLO] Object Detector initialized: {yolo_model_path}")
                 except Exception as e:
-                    print(f"⚠️ Failed to load YOLO model: {e}")
+                    print(f"[YOLO] Failed to load YOLO model: {e}")
             else:
-                print("⚠️ ultralytics not installed. Stage 1 detection will be bypassed.")
+                print("[YOLO] ultralytics not installed. Stage 1 detection will be bypassed.")
         else:
-            print("⚠️ YOLO not initialized. Stage 1 detection will be bypassed.")
+            print("[YOLO] not initialized. Stage 1 detection will be bypassed.")
 
         # Cache of seen hashes for duplicate detection (In production, use Redis/DB)
         self.seen_hashes = set()
@@ -73,12 +73,13 @@ class InferencePipeline:
         is_blurry = blur_level < threshold
         return blur_level, is_blurry
 
-    def stage1_detect_and_crop(self, image: np.ndarray) -> Tuple[np.ndarray, Dict[str, Any]]:
+    def stage1_detect_and_crop(self, image: np.ndarray, expansion_margin: float = 0.15) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
         Stage 1: Use YOLO to detect the footprint and crop the image.
         If YOLO is not available or detects nothing, return original image.
+        expansion_margin: percentage to expand the bounding box outwards.
         """
-        stage1_meta = {"yolo_used": False, "bounding_box": None, "confidence": 0.0}
+        stage1_meta = {"yolo_used": False, "bounding_box": None, "confidence": 0.0, "expansion_margin": expansion_margin}
 
         if self.yolo_model is None:
             return image, stage1_meta
@@ -88,10 +89,20 @@ class InferencePipeline:
         if len(results) > 0 and len(results[0].boxes) > 0:
             # Get highest confidence box
             boxes = results[0].boxes
-            best_box = boxes[0]  # Assuming highest conf is first, or sort by conf
+            best_box = boxes[0]  
             
             x1, y1, x2, y2 = map(int, best_box.xyxy[0].tolist())
             conf = float(best_box.conf[0])
+            
+            # Expand bounding box
+            h, w = image.shape[:2]
+            bw = x2 - x1
+            bh = y2 - y1
+            
+            x1 = max(0, int(x1 - bw * expansion_margin))
+            y1 = max(0, int(y1 - bh * expansion_margin))
+            x2 = min(w, int(x2 + bw * expansion_margin))
+            y2 = min(h, int(y2 + bh * expansion_margin))
             
             # Crop image
             cropped_image = image[y1:y2, x1:x2]

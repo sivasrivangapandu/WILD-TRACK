@@ -1,0 +1,70 @@
+{
+  "source": "backend/dataset_cleaned",
+  "output": "backend/dataset_strict",
+  "quarantine": "backend/dataset_quarantine_strict",
+  "target_size": 300,
+  "thresholds": {
+    "min_blur": 80.0,
+    "min_entropy": 4.0,
+    "min_size": 160,
+    "garbage_threshold": 70.0,
+    "phash_threshold": 8
+  },
+  "totals": {
+    "before": 2000,
+    "after": 1760,
+    "quarantined": 158,
+    "deduped": 82
+  },
+  "classes": {
+    "deer": {
+      "before": 400,
+      "kept": 335,
+      "quarantined": 65,
+      "reasons": {
+        "blurry": 3,
+        "low_detail": 44,
+        "near_duplicate": 18
+      }
+    },
+    "elephant": {
+      "before": 400,
+      "kept": 366,
+      "quarantined": 34,
+      "reasons": {
+        "low_detail": 22,
+        "near_duplicate": 12
+      }
+    },
+    "leopard": {
+      "before": 400,
+      "kept": 343,
+      "quarantined": 57,
+      "reasons": {
+        "blurry": 1,
+        "low_detail": 33,
+        "near_duplicate": 23
+      }
+    },
+    "tiger": {
+      "before": 400,
+      "kept": 354,
+      "quarantined": 46,
+      "reasons": {
+        "blurry": 1,
+        "low_detail": 23,
+        "near_duplicate": 22
+      }
+    },
+    "wolf": {
+      "before": 400,
+      "kept": 362,
+      "quarantined": 38,
+      "reasons": {
+        "blurry": 5,
+        "low_detail": 26,
+        "near_duplicate": 7
+      }
+    }
+  }
+}

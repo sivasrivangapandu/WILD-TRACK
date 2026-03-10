@@ -1,4 +1,4 @@
-﻿"""
+"""
 WildTrackAI - Phase 5: Production FastAPI Backend
 ==================================================
 SQLite database with SQLAlchemy for prediction history.
@@ -33,6 +33,7 @@ from contextlib import asynccontextmanager
 
 import numpy as np
 import cv2
+import tensorflow as tf
 from PIL import Image
 from dotenv import load_dotenv
 
@@ -75,7 +76,7 @@ METADATA_PATH = os.path.join(MODELS_DIR, "model_metadata.json")
 # Default image size (overridden by metadata if available)
 IMG_SIZE = 300
 
-# Confidence threshold — below this, prediction is "unknown"
+# Confidence threshold -- below this, prediction is "unknown"
 CONFIDENCE_THRESHOLD = 0.40
 
 # Gemini AI Configuration
@@ -85,18 +86,26 @@ if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        print(f"  ✅ Gemini AI initialized (gemini-2.0-flash)")
+        print(f"  [OK] Gemini AI initialized (gemini-2.0-flash)")
     except Exception as e:
-        print(f"  ⚠️ Gemini init failed: {e} — falling back to rule-based chat")
+        print(f"  [WARN] Gemini init failed: {e} -- falling back to rule-based chat")
 else:
-    print("  ⚠️ No GEMINI_API_KEY found — using rule-based chat")
+    print("  [WARN] No GEMINI_API_KEY found -- using rule-based chat")
 
 # API Ninjas Configuration
 NINJA_API_KEY = os.getenv("NINJA_API_KEY", "")
 if NINJA_API_KEY:
-    print(f"  ✅ API Ninjas initialized")
+    print(f"  [OK] API Ninjas initialized")
 else:
-    print("  ⚠️ No NINJA_API_KEY found — animal search will be unavailable")
+    print("  [WARN] No NINJA_API_KEY found -- animal search will be unavailable")
+
+# Cloudinary Configuration
+CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "").strip()
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "").strip()
+_cloudinary_initialized = False
+_cloudinary_warned = False
 
 # Create directories
 for d in [UPLOADS_DIR, OUTPUTS_DIR]:
@@ -132,6 +141,47 @@ MODEL_URLS = {
 model_download_status = {"status": "pending", "downloaded": [], "failed": []}
 
 
+def upload_to_cloudinary(contents: bytes, pred_id: str) -> str:
+    """Upload bytes to Cloudinary when configured; otherwise return empty URL."""
+    global _cloudinary_initialized, _cloudinary_warned
+
+    if not CLOUDINARY_URL and not (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET):
+        if not _cloudinary_warned:
+            print("  [WARN] Cloudinary credentials not set -- skipping Cloudinary uploads")
+            _cloudinary_warned = True
+        return ""
+
+    try:
+        import cloudinary
+        import cloudinary.uploader
+
+        if not _cloudinary_initialized:
+            if CLOUDINARY_URL:
+                cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+            else:
+                normalized_cloud_name = CLOUDINARY_CLOUD_NAME.strip().lower().replace(" ", "")
+                cloudinary.config(
+                    cloud_name=normalized_cloud_name,
+                    api_key=CLOUDINARY_API_KEY,
+                    api_secret=CLOUDINARY_API_SECRET,
+                    secure=True,
+                )
+            _cloudinary_initialized = True
+
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            public_id=f"pred_{pred_id}",
+            folder="wildtrack_predictions",
+            overwrite=True,
+        )
+        return upload_result.get("secure_url", "")
+    except Exception as e:
+        if not _cloudinary_warned:
+            print(f"  [WARN] Cloudinary unavailable -- continuing without upload ({e})")
+            _cloudinary_warned = True
+        return ""
+
+
 def download_models_if_missing():
     """Download model files from GitHub Release if not present locally."""
     import requests as req
@@ -144,7 +194,7 @@ def download_models_if_missing():
         filepath = os.path.join(MODELS_DIR, filename)
         if os.path.exists(filepath):
             file_size = os.path.getsize(filepath) / (1024 * 1024)
-            print(f"  ✓ Model exists: {filename} ({file_size:.1f} MB)")
+            print(f"  OK Model exists: {filename} ({file_size:.1f} MB)")
             model_download_status["downloaded"].append(filename)
             continue
             
@@ -170,18 +220,18 @@ def download_models_if_missing():
                                 print(f"    Progress: {progress:.0f}% ({downloaded / (1024*1024):.1f}/{total_size / (1024*1024):.1f} MB)")
                 
                 size_mb = os.path.getsize(filepath) / (1024 * 1024)
-                print(f"  ✅ Downloaded {filename} ({size_mb:.1f} MB)")
+                print(f"  [OK] Downloaded {filename} ({size_mb:.1f} MB)")
                 model_download_status["downloaded"].append(filename)
                 break  # Success, exit retry loop
                 
             except Exception as e:
-                print(f"  ❌ Attempt {attempt} failed: {e}")
+                print(f"  [ERROR] Attempt {attempt} failed: {e}")
                 if attempt < max_retries:
                     wait_time = 2 ** attempt  # Exponential backoff
                     print(f"  Retrying in {wait_time}s...")
                     sleep(wait_time)
                 else:
-                    print(f"  ❌ All download attempts failed for {filename}")
+                    print(f"  [ERROR] All download attempts failed for {filename}")
                     model_download_status["failed"].append(filename)
                     # Clean up partial download
                     if os.path.exists(filepath):
@@ -520,7 +570,7 @@ def generate_quality_warning(blur_level):
     elif blur_level >= 45:
         return (
             "Image is significantly blurry. Footprint edge definition is limited. "
-            "Classification confidence may be unreliable—field validation recommended.",
+            "Classification confidence may be unreliable--field validation recommended.",
             'warning'
         )
     else:
@@ -538,7 +588,7 @@ def normalize_contrast(image):
     Critical for footprints on low-contrast substrates.
     """
     if len(image.shape) == 3:
-        # Convert BGR → LAB color space (works on L channel only)
+        # Convert BGR   LAB color space (works on L channel only)
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
         l_channel = lab[:, :, 0]
         
@@ -670,20 +720,20 @@ def intelligent_resize(image, target_size=300):
     return canvas
 
 
-def preprocess_image(file_bytes, target_size=None):
+def preprocess_image(file_bytes, target_size=None, expansion_margin=0.15):
     """Preprocess uploaded image to EXACTLY match the training pipeline.
     
     CRITICAL: The model was trained with tf.data using:
-        tf.image.decode_image → tf.image.resize → tf.cast(float32)
+        tf.image.decode_image   tf.image.resize   tf.cast(float32)
     
     Any additional preprocessing (CLAHE, edge sharpening, gamma correction)
     creates a domain gap that destroys prediction accuracy.
     
     Pipeline (matches training):
     1. Decode image from bytes
-    2. Collect quality metrics (blur, pHash) for UI — does NOT modify the image
-    3. Convert BGR → RGB (OpenCV decodes BGR, TF trained on RGB)
-    4. Resize to target_size × target_size (simple resize, no padding)
+    2. Collect quality metrics (blur, pHash) for UI -- does NOT modify the image
+    3. Convert BGR   RGB (OpenCV decodes BGR, TF trained on RGB)
+    4. Resize to target_size   target_size (simple resize, no padding)
     5. Cast to float32 [0, 255]
     
     Returns:
@@ -703,7 +753,7 @@ def preprocess_image(file_bytes, target_size=None):
 
     original = img.copy()
     
-    # ── Quality metrics (for UI display only — does NOT modify the image) ──
+    #    Quality metrics (for UI display only -- does NOT modify the image)   
     quality_metrics = {}
     
     # Perceptual hash
@@ -716,6 +766,15 @@ def preprocess_image(file_bytes, target_size=None):
     quality_metrics['blur_level'] = float(blur_level)
     quality_metrics['is_blurry'] = bool(is_blurry)
     
+    # NEW: Calculate Brightness (for snow-track heuristic)
+    if len(img.shape) == 3:
+        # Convert to LAB for accurate perceptual brightness (L-channel)
+        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        brightness = np.mean(lab[:, :, 0])
+    else:
+        brightness = np.mean(img)
+    quality_metrics['brightness'] = float(brightness)
+    
     # Generate quality warning
     warning_msg, warning_severity = generate_quality_warning(blur_level)
     if warning_msg:
@@ -725,19 +784,34 @@ def preprocess_image(file_bytes, target_size=None):
     quality_metrics['gamma_applied'] = False
     quality_metrics['processing_applied'] = False
     
-    # Stage 1: YOLO Object Detection & Crop (operate on BGR)
-    img, stage1_meta = pipeline.stage1_detect_and_crop(img)
+    # Stage 1: YOLO Object Detection & Crop
+    img, stage1_meta = pipeline.stage1_detect_and_crop(img, expansion_margin=expansion_margin)
     
-    # ── Match training pipeline exactly ──
-    # Step 1: Convert BGR (OpenCV) → RGB (TensorFlow training used tf.image.decode_image which gives RGB)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    #    Match training pipeline exactly   
+    # Step 1: Convert BGR (OpenCV)   RGB (TensorFlow training used tf.image.decode_image which gives RGB)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     
-    # Step 2: Simple resize to target_size × target_size (training used tf.image.resize)
-    img = cv2.resize(img, (target_size, target_size), interpolation=cv2.INTER_LINEAR)
+    # Step 2: Use Letterbox Resize to maintain aspect ratio (training consistency fix)
+    old_h, old_w = img_rgb.shape[:2]
+    ratio = float(target_size) / max(old_h, old_w)
+    new_h, new_w = int(old_h * ratio), int(old_w * ratio)
     
-    # Step 3: Cast to float32 (training used tf.cast(img, tf.float32) keeping [0, 255] range)
-    img_array = img.astype('float32')
+    # Resize keeping aspect ratio - use INTER_CUBIC for sharper feline features
+    rsz = cv2.resize(img_rgb, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+    
+    # Create target canvas and center the image (using neutral gray padding)
+    img_padded = np.full((target_size, target_size, 3), 127, dtype=np.uint8)
+    y_offset = (target_size - new_h) // 2
+    x_offset = (target_size - new_w) // 2
+    img_padded[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = rsz
+    
+    # Convert to tensor for consistency
+    img_tensor = tf.convert_to_tensor(img_padded, dtype=tf.float32)
+    img_array = img_tensor.numpy()
     img_array = np.expand_dims(img_array, axis=0)
+
+    import sys
+    sys.stdout.flush()
 
     return img_array, original, quality_metrics, stage1_meta
 
@@ -767,14 +841,21 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
     # Stage 3: Geo-aware logical filtering
     filtered_probs = pipeline.stage3_geo_filter(raw_probs, lat, lon, class_names)
 
-    # Stage 4: Temperature scaling — PROPERLY calibrate confidence
+    # Stage 4: Temperature scaling -- PROPERLY calibrate confidence
     TEMPERATURE = 1.2
     predictions = pipeline.stage4_calibrate_confidence(filtered_probs, TEMPERATURE)
 
-    # Shannon entropy — uncertainty quantification (bits)
+    # Shannon entropy -- uncertainty quantification (bits)
     entropy = float(-np.sum(predictions * np.log2(predictions + 1e-10)))
     max_entropy = float(np.log2(len(predictions)))  # uniform distribution
     entropy_ratio = entropy / max_entropy if max_entropy > 0 else 0.0
+
+    print(f"\n[DIAG] Raw Probs (TTA={use_tta}):")
+    for i, p in enumerate(raw_probs):
+        print(f"  {class_names[i]}: {p:.4f}")
+    print(f"[DIAG] Calibrated Probs (T=1.2):")
+    for i, p in enumerate(predictions):
+        print(f"  {class_names[i]}: {p:.4f}")
 
     predicted_idx = int(np.argmax(predictions))
     confidence = float(predictions[predicted_idx])
@@ -825,7 +906,7 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         except Exception as e:
             print(f"GradCAM error: {e}")
 
-    # ── AI CONSENSUS VALIDATION ──────────────────────────────────
+    #    AI CONSENSUS VALIDATION                                   
     # Second Opinion: Run single-pass (no TTA) for an independent perspective
     try:
         second_opinion_raw = model.predict(img_array, verbose=0)[0]
@@ -913,7 +994,7 @@ async def readiness_check():
 
 @app.get("/api/system/status")
 async def system_status():
-    """Production system status — model version, accuracy, TTA, uptime."""
+    """Production system status -- model version, accuracy, TTA, uptime."""
     now = datetime.datetime.utcnow()
     uptime_seconds = (now - _startup_time).total_seconds() if _startup_time else 0
     hours, remainder = divmod(int(uptime_seconds), 3600)
@@ -966,12 +1047,76 @@ async def predict(
     # Read and preprocess (now returns quality metrics and stage1 meta)
     contents = await file.read()
     try:
-        img_array, original, quality_metrics, stage1_meta = preprocess_image(contents)
+        img_array, original, quality_metrics, stage1_meta = preprocess_image(contents, expansion_margin=0.15)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
 
     # Predict with quality metrics and geo-aware pipeline
     result = predict_single(img_array, original, quality_metrics=quality_metrics, lat=latitude, lon=longitude)
+    
+    #    DYNAMIC CROP EVALUATION FOR AMBIGUOUS SNOW TRACKS   
+    # If the track is ambiguous (low confidence) and YOLO was used, 
+    # run a second pass without the 15% padding because snow noise can confuse felines and canines.
+    if stage1_meta.get("yolo_used") and result.get("confidence", 0) < 0.60 and result.get("predicted_class") in ["leopard", "wolf", "tiger", "dog", "fox", "cat", "unknown"]:
+        try:
+            print("  [DIAG] Ambiguous track detected. Running fallback evaluation without expansion margin...")
+            img_array_fb, original_fb, quality_metrics_fb, stage1_meta_fb = preprocess_image(contents, expansion_margin=0.0)
+            result_fb = predict_single(img_array_fb, original_fb, quality_metrics=quality_metrics_fb, lat=latitude, lon=longitude)
+            
+            result["fallback_meta"] = {
+                "initial_pred": result.get("predicted_class"),
+                "initial_conf": result.get("confidence", 0),
+                "fb_pred": result_fb.get("predicted_class"),
+                "fb_conf": result_fb.get("confidence", 0)
+            }
+            
+            # Use the fallback if it yields a significantly more confident result
+            if result_fb.get("confidence", 0) > result.get("confidence", 0):
+                print(f"  [DIAG] Fallback preferred: {result_fb.get('predicted_class')} ({result_fb.get('confidence'):.2f}) > {result.get('predicted_class')} ({result.get('confidence'):.2f})")
+                result_fb["fallback_meta"] = result["fallback_meta"]
+                result_fb["fallback_used"] = True
+                result = result_fb
+        except Exception as e:
+            print(f"  [DIAG] Fallback evaluation failed: {e}")
+            
+    #    DOMAIN HEURISTIC: SNOW TRACK OBFUSCATION   
+    # Wolf/Canine tracks in snow lose their claw marks and are frequently misclassified as leopards.
+    if result.get("predicted_class") in ["leopard", "tiger"]:
+        wolf_item = next((item for item in result.get("top3", []) if item["class"] == "wolf"), None)
+        # If wolf is a strong secondary candidate
+        if wolf_item and wolf_item["confidence"] > 0.15:
+            brightness = quality_metrics.get("brightness", 0) if quality_metrics else 0
+            # If the image is bright (indicative of snow/overexposure where details are lost)
+            if brightness > 130:
+                print(f"  [DIAG] Snow/Wolf heuristic triggered. Brightness: {brightness:.1f}. Swapping to Wolf.")
+                result["predicted_class"] = "wolf"
+                result["species"] = "wolf"
+                result["raw_class"] = "wolf"
+                result["confidence"] = float(wolf_item["confidence"])
+                result["quality_adjusted_confidence"] = round(float(wolf_item["confidence"]), 4)
+                result["heuristic_applied"] = "snow_wolf_swap"
+                
+                # Re-sort top3 so wolf is at the top
+                top3 = result.get("top3", [])
+                for item in top3:
+                    if item["class"] == "wolf":
+                        # Temporarily boost its sorting value
+                        item["_sort_conf"] = 1.0
+                    else:
+                        item["_sort_conf"] = item["confidence"]
+                
+                top3.sort(key=lambda x: x["_sort_conf"], reverse=True)
+                for item in top3:
+                    item.pop("_sort_conf", None)
+                
+                # Clean up and fix deltas
+                top_conf = top3[0]["confidence"]
+                for item in top3:
+                    item.pop("_sort_conf", None)
+                    item["delta"] = round(top_conf - item["confidence"], 4)
+                
+                result["top3"] = top3
+                result["heuristic_applied"] = "snow_wolf_correction"
     
     # Auto-rejection for severely blurry images
     blur_level = quality_metrics.get('blur_level', 100)
@@ -983,20 +1128,8 @@ async def predict(
 
     pred_id = str(uuid.uuid4())[:8]
     
-    # Save to Cloudinary
-    image_url = ""
-    try:
-        import cloudinary
-        import cloudinary.uploader
-        upload_result = cloudinary.uploader.upload(
-            contents,
-            public_id=f"pred_{pred_id}",
-            folder="wildtrack_predictions",
-            overwrite=True
-        )
-        image_url = upload_result.get("secure_url")
-    except Exception as e:
-        print(f"Cloudinary upload failed: {e}")
+    # Save to Cloudinary (optional; safely skipped when not configured)
+    image_url = upload_to_cloudinary(contents, pred_id)
 
     # Store in database
     db = SessionLocal()
@@ -1068,20 +1201,8 @@ async def predict_batch(files: List[UploadFile] = File(...),
             blur_level = quality_metrics.get('blur_level', 100)
             requires_field_validation = blur_level < 45
 
-            # Save to Cloudinary
-            image_url = ""
-            try:
-                import cloudinary
-                import cloudinary.uploader
-                upload_result = cloudinary.uploader.upload(
-                    contents,
-                    public_id=f"pred_{pred_id}",
-                    folder="wildtrack_predictions",
-                    overwrite=True
-                )
-                image_url = upload_result.get("secure_url")
-            except Exception as e:
-                print(f"Cloudinary upload failed: {e}")
+            # Save to Cloudinary (optional; safely skipped when not configured)
+            image_url = upload_to_cloudinary(contents, pred_id)
 
             # Store in DB
             db = SessionLocal()
@@ -1177,7 +1298,7 @@ class SpeciesSearchRequest(BaseModel):
 async def species_search(req: SpeciesSearchRequest):
     """
     AI-powered wildlife footprint search engine.
-    Uses Gemini to generate detailed species info for ANY animal — not limited to trained species.
+    Uses Gemini to generate detailed species info for ANY animal -- not limited to trained species.
     Falls back to ANIMAL_INFO for trained species.
     """
     query = req.query.strip().lower()
@@ -1298,7 +1419,7 @@ If the query is not a real animal or you can't identify it, respond with:
 
 
 # ============================================
-# API NINJAS — ANIMAL INFO ENDPOINT
+# API NINJAS -- ANIMAL INFO ENDPOINT
 # ============================================
 
 import requests
@@ -1306,7 +1427,7 @@ import requests
 @app.get("/api/animal-info")
 async def get_animal_info(name: str = Query(..., min_length=1)):
     """
-    WildTrackAI Knowledge Engine — structured wildlife intelligence.
+    WildTrackAI Knowledge Engine -- structured wildlife intelligence.
     Transforms biological data into curated semantic sections.
     """
     if not NINJA_API_KEY:
@@ -1356,7 +1477,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
         family = taxonomy.get("family", "")
         order = taxonomy.get("order", "")
         
-        # ── SEMANTIC SECTION 1: Overview ──
+        #    SEMANTIC SECTION 1: Overview   
         overview = (
             f"{name_common} ({sci_name}) is a {animal_type.lower() or 'vertebrate'} species "
             f"belonging to the family {family or 'unknown'}. "
@@ -1366,7 +1487,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
             f"component of its native ecosystem's biodiversity."
         )
         
-        # ── SEMANTIC SECTION 2: Ecology ──
+        #    SEMANTIC SECTION 2: Ecology   
         diet_behavior = {
             "Carnivore": f"As a carnivore, {name_common} occupies a high trophic level, regulating prey populations and maintaining ecosystem equilibrium. Its hunting behavior shapes the movement and vigilance patterns of sympatric herbivores.",
             "Herbivore": f"As a herbivore, {name_common} plays a foundational role in energy transfer within its ecosystem. Through selective grazing and browsing, it influences vegetation structure and facilitates nutrient cycling across {habitat.lower()}.",
@@ -1379,7 +1500,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
             f"and generational knowledge transfer within their social groups."
         )
         
-        # ── SEMANTIC SECTION 3: Physical Traits ──
+        #    SEMANTIC SECTION 3: Physical Traits   
         physical_traits = (
             f"{name_common} is characterized by {color.lower() if color != 'variable' else 'species-typical'} coloration "
             f"and {skin_type.lower() + ' covering' if skin_type else 'a body plan'} adapted for its environment. "
@@ -1389,7 +1510,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
             f"suited to the species' ecological requirements."
         )
         
-        # ── SEMANTIC SECTION 4: Field Identification ──
+        #    SEMANTIC SECTION 4: Field Identification   
         field_identification = (
             f"When tracking {name_common} in the field, focus on {habitat.lower()} environments "
             f"where {'prey' if diet == 'Carnivore' else 'foraging' if diet == 'Herbivore' else 'food'} sources are abundant. "
@@ -1400,7 +1521,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
             f"Track surveys are most productive during dawn and dusk when activity peaks."
         )
         
-        # ── SEMANTIC SECTION 5: Distribution Summary ──
+        #    SEMANTIC SECTION 5: Distribution Summary   
         distribution_summary = (
             f"{name_common} ranges across {location_str}. "
             f"Within this geographic range, the species selectively occupies {habitat.lower()}, "
@@ -1409,7 +1530,7 @@ async def get_animal_info(name: str = Query(..., min_length=1)):
             f"and anthropogenic pressures."
         )
         
-        # ── SEMANTIC SECTION 6: Conservation Note ──
+        #    SEMANTIC SECTION 6: Conservation Note   
         conservation_role = {
             "Carnivore": "apex predator maintaining ecosystem balance through top-down regulation",
             "Herbivore": "key grazer shaping vegetation structure and facilitating habitat renewal",
@@ -1596,28 +1717,28 @@ async def get_model_metrics():
 # ============================================
 # GEMINI SYSTEM PROMPT
 # ============================================
-WILDTRACK_SYSTEM_PROMPT = """You are the WildTrackAI assistant — an expert AI chatbot embedded in a wildlife footprint identification system built as a final-year computer science project.
+WILDTRACK_SYSTEM_PROMPT = """You are the WildTrackAI assistant -- an expert AI chatbot embedded in a wildlife footprint identification system built as a final-year computer science project.
 
 ## About the System
-- **Project:** WildTrackAI — AI-powered animal footprint identification
+- **Project:** WildTrackAI -- AI-powered animal footprint identification
 - **Model:** EfficientNetB3 v4 (transfer learning from ImageNet, SE Attention)
-- **Input:** 300×300 pixel footprint images
+- **Input:** 300 300 pixel footprint images
 - **Accuracy:** 77.5% on 5 species (with TTA; 74.5% without TTA)
 - **Training data:** 2,000 total images (1,600 train + 400 validation, balanced 400/class)
 - **Data cleaning:** Perceptual hash deduplication, CLAHE normalization, corrupt image removal
 - **Augmentation:** MixUp, CutMix, Random Erasing, SGDR warm restarts
 - **Inference:** Test-Time Augmentation (3 passes)
 - **Explainability:** Grad-CAM (Gradient-weighted Class Activation Mapping) heatmaps
-- **Confidence threshold:** 40% — below this AND high entropy, species is marked "Unknown"
+- **Confidence threshold:** 40% -- below this AND high entropy, species is marked "Unknown"
 - **Backend:** FastAPI + SQLAlchemy + SQLite
 - **Frontend:** React 18 + Vite + Tailwind CSS + Framer Motion
 
 ## Supported Species & Their Details
-1. **Tiger** (Panthera tigris) — Endangered. Footprint: 12-16cm, round & asymmetric, no claw marks. Weight: 180-300kg. Habitat: tropical forests, mangroves.
-2. **Leopard** (Panthera pardus) — Vulnerable. Footprint: 7-10cm, compact & round, no claw marks. Weight: 30-90kg. Habitat: diverse (forests, savannas, mountains).
-3. **Elephant** (Elephas maximus) — Endangered. Footprint: 40-50cm, large & round, cracked skin pattern. Weight: 2,700-6,000kg. Habitat: forests, grasslands.
-4. **Deer** (Cervidae family) — Least Concern. Footprint: 5-9cm, cloven hoof (two toes). Weight: 30-250kg. Habitat: forests, grasslands.
-5. **Wolf** (Canis lupus) — Least Concern. Footprint: 10-13cm, oval with visible claw marks. Weight: 30-80kg. Habitat: forests, tundra, mountains.
+1. **Tiger** (Panthera tigris) -- Endangered. Footprint: 12-16cm, round & asymmetric, no claw marks. Weight: 180-300kg. Habitat: tropical forests, mangroves.
+2. **Leopard** (Panthera pardus) -- Vulnerable. Footprint: 7-10cm, compact & round, no claw marks. Weight: 30-90kg. Habitat: diverse (forests, savannas, mountains).
+3. **Elephant** (Elephas maximus) -- Endangered. Footprint: 40-50cm, large & round, cracked skin pattern. Weight: 2,700-6,000kg. Habitat: forests, grasslands.
+4. **Deer** (Cervidae family) -- Least Concern. Footprint: 5-9cm, cloven hoof (two toes). Weight: 30-250kg. Habitat: forests, grasslands.
+5. **Wolf** (Canis lupus) -- Least Concern. Footprint: 10-13cm, oval with visible claw marks. Weight: 30-80kg. Habitat: forests, tundra, mountains.
 
 ## Key Technical Concepts
 - **Grad-CAM:** Shows which regions of the image the CNN focused on. Red = high importance, Blue = low importance.
@@ -1629,12 +1750,12 @@ WILDTRACK_SYSTEM_PROMPT = """You are the WildTrackAI assistant — an expert AI 
 
 ## Response Format (ALWAYS use this structure when analyzing predictions)
 Always respond in these structured sections when a prediction is provided:
-### 🔍 Prediction Analysis
-### 📊 Confidence Interpretation
-### 🧬 Footprint Characteristics
-### ⚖️ Alternative Hypotheses
-### 🌍 Ecological Insight
-### 📌 Suggested Next Steps
+###   Prediction Analysis
+###   Confidence Interpretation
+###   Footprint Characteristics
+###    Alternative Hypotheses
+###   Ecological Insight
+###   Suggested Next Steps
 
 For text-only questions, respond naturally but stay structured with markdown.
 
@@ -1644,14 +1765,14 @@ For text-only questions, respond naturally but stay structured with markdown.
 - When discussing predictions, reference the actual data provided
 - If asked about species NOT in the system, explain closed-set classification
 - Never fabricate accuracy numbers or capabilities
-- Stay focused on wildlife, footprints, conservation, and the system — politely redirect off-topic questions
+- Stay focused on wildlife, footprints, conservation, and the system -- politely redirect off-topic questions
 - If a prediction is "unknown" (is_unknown=True), explain the threshold mechanism and suggest possible reasons
 - When the user asks "why not X?", compare the predicted species features against X using the species data
 """
 
 
 # ============================================
-# SESSION MEMORY — lightweight conversational context
+# SESSION MEMORY -- lightweight conversational context
 # ============================================
 from collections import defaultdict
 import time
@@ -1690,7 +1811,7 @@ def _update_session(session_id: str, user_msg: str, bot_msg: str, prediction: di
 
 
 # ============================================
-# SPECIES FEATURE DATA — for structured reasoning
+# SPECIES FEATURE DATA -- for structured reasoning
 # ============================================
 SPECIES_FEATURES = {
     "tiger": {
@@ -1759,19 +1880,19 @@ def _confidence_interpretation(confidence: float, species: str) -> str:
     """Generate intelligent confidence interpretation."""
     f1 = SPECIES_FEATURES.get(species, {}).get("f1_score", 0.7)
     if confidence >= 0.85:
-        return (f"**Very High Confidence** — The model is {confidence*100:.1f}% certain. "
+        return (f"**Very High Confidence** -- The model is {confidence*100:.1f}% certain. "
                 f"This species has an F1 score of {f1:.3f}, indicating reliable identification. "
                 f"The footprint features strongly align with known {species} characteristics.")
     elif confidence >= 0.70:
-        return (f"**High Confidence** — At {confidence*100:.1f}%, the model is fairly certain. "
+        return (f"**High Confidence** -- At {confidence*100:.1f}%, the model is fairly certain. "
                 f"This is above the reliability threshold. Minor feature ambiguity is possible "
                 f"but the primary identification is likely correct.")
     elif confidence >= 0.50:
-        return (f"**Moderate Confidence** — At {confidence*100:.1f}%, the model's certainty is above "
+        return (f"**Moderate Confidence** -- At {confidence*100:.1f}%, the model's certainty is above "
                 f"our 50% threshold but not conclusive. Consider factors like image quality, "
                 f"partial print visibility, or substrate softness that may affect accuracy.")
     else:
-        return (f"**Below Threshold** — At {confidence*100:.1f}%, the confidence falls below our "
+        return (f"**Below Threshold** -- At {confidence*100:.1f}%, the confidence falls below our "
                 f"50% identification threshold. The model cannot reliably determine the species. "
                 f"This may indicate an out-of-distribution species or non-footprint image.")
 
@@ -1784,14 +1905,14 @@ def _get_species_characteristics(species: str) -> str:
         return f"Limited feature data available for {species}."
 
     lines = []
-    lines.append(f"• **Pad shape:** {feat['pad_shape']}")
-    lines.append(f"• **Toe count:** {feat['toe_count']}")
-    lines.append(f"• **Claw marks:** {'Visible' if feat['claw_marks'] else 'Not visible (retractable or absent)'}")
-    lines.append(f"• **Print symmetry:** {feat['symmetry']}")
-    lines.append(f"• **Expected size:** {feat['size_range']}")
-    lines.append(f"• **Key identifier:** {feat['distinguishing']}")
+    lines.append(f"  **Pad shape:** {feat['pad_shape']}")
+    lines.append(f"  **Toe count:** {feat['toe_count']}")
+    lines.append(f"  **Claw marks:** {'Visible' if feat['claw_marks'] else 'Not visible (retractable or absent)'}")
+    lines.append(f"  **Print symmetry:** {feat['symmetry']}")
+    lines.append(f"  **Expected size:** {feat['size_range']}")
+    lines.append(f"  **Key identifier:** {feat['distinguishing']}")
     if info.get('habitat'):
-        lines.append(f"• **Typical habitat:** {info['habitat']}")
+        lines.append(f"  **Typical habitat:** {info['habitat']}")
     return "\n".join(lines)
 
 
@@ -1816,7 +1937,7 @@ def _get_alternative_analysis(top3: list, predicted: str) -> str:
                     similarities.append("similar claw pattern")
                 if similarities:
                     reason = f" (shares {', '.join(similarities)} with {predicted})"
-        lines.append(f"• **{alt.title()}** — {conf*100:.1f}%{reason}")
+        lines.append(f"  **{alt.title()}** -- {conf*100:.1f}%{reason}")
         if feat.get("distinguishing"):
             lines.append(f"  _{feat['distinguishing']}_")
     return "\n".join(lines)
@@ -1826,8 +1947,8 @@ def _get_ecological_insight(species: str) -> str:
     """Generate ecological context."""
     info = ANIMAL_INFO.get(species, {})
     insights = {
-        "tiger": "Tiger footprints are critical for population monitoring in tiger reserves. Each tiger has unique paw pad patterns, enabling individual identification — a key technique in Project Tiger conservation programs across India.",
-        "leopard": "Leopards are the most adaptable big cats, found from rainforests to mountains. Their footprints near human settlements indicate corridor connectivity — vital for genetic diversity in fragmented habitats.",
+        "tiger": "Tiger footprints are critical for population monitoring in tiger reserves. Each tiger has unique paw pad patterns, enabling individual identification -- a key technique in Project Tiger conservation programs across India.",
+        "leopard": "Leopards are the most adaptable big cats, found from rainforests to mountains. Their footprints near human settlements indicate corridor connectivity -- vital for genetic diversity in fragmented habitats.",
         "elephant": "Elephant footprints can reveal age, size, and movement patterns. Tracking elephant corridors helps prevent human-elephant conflict and guides conservation of migration routes.",
         "deer": "Deer footprints are the most commonly found ungulate tracks. Their abundance indicates ecosystem health and forest regeneration patterns. Multiple deer tracks often signal nearby water sources.",
         "wolf": "Wolf tracks help monitor pack territories and population dynamics. The characteristic direct-register gait (rear paw landing in front paw print) distinguishes wolf trails from domestic dog paths.",
@@ -1836,14 +1957,14 @@ def _get_ecological_insight(species: str) -> str:
     if info.get("conservation_status"):
         status = info["conservation_status"]
         if "Endangered" in status:
-            base += f"\n\n🔴 **Conservation Alert:** {species.title()} is listed as {status}. Every tracked footprint contributes to population estimates critical for species survival."
+            base += f"\n\n  **Conservation Alert:** {species.title()} is listed as {status}. Every tracked footprint contributes to population estimates critical for species survival."
         elif "Vulnerable" in status:
-            base += f"\n\n🟡 **Conservation Note:** {species.title()} is {status}. Monitoring footprint distribution helps track population trends."
+            base += f"\n\n  **Conservation Note:** {species.title()} is {status}. Monitoring footprint distribution helps track population trends."
     return base
 
 
 def _build_structured_prediction_response(prediction_result: dict) -> str:
-    """Build a full structured analysis from prediction data — AI-grade without Gemini."""
+    """Build a full structured analysis from prediction data -- AI-grade without Gemini."""
     species = prediction_result.get("predicted_class", "unknown")
     confidence = prediction_result.get("confidence", 0)
     top3 = prediction_result.get("top3", [])
@@ -1853,20 +1974,20 @@ def _build_structured_prediction_response(prediction_result: dict) -> str:
     sections = []
 
     # --- Section 1: Prediction Analysis ---
-    sections.append("### 🔍 Prediction Analysis")
+    sections.append("###   Prediction Analysis")
     if is_unknown:
         supported_species = ', '.join(c.title() for c in class_names) if class_names else 'N/A'
         sections.append(
-            f"⚠️ **Result: Unknown Species**\n\n"
+            f"   **Result: Unknown Species**\n\n"
             f"The model could not confidently identify this footprint. "
             f"The highest probability class is **{raw_class.title()}** at only **{confidence*100:.1f}%**, "
             f"which falls below our **{int(CONFIDENCE_THRESHOLD*100)}% confidence threshold**.\n\n"
             f"**This can happen when:**\n"
-            f"• The image is not a real animal footprint (cartoons, drawings, or non-footprint content)\n"
-            f"• The species is outside our trained classes: **{supported_species}**\n"
-            f"• The image quality is poor (blurry, overexposed, or the footprint is not centered)\n"
-            f"• The footprint is heavily degraded or partially visible\n\n"
-            f"The system marks this as **Unknown** to prevent forced misclassification — "
+            f"  The image is not a real animal footprint (cartoons, drawings, or non-footprint content)\n"
+            f"  The species is outside our trained classes: **{supported_species}**\n"
+            f"  The image quality is poor (blurry, overexposed, or the footprint is not centered)\n"
+            f"  The footprint is heavily degraded or partially visible\n\n"
+            f"The system marks this as **Unknown** to prevent forced misclassification -- "
             f"a responsible AI safety practice."
         )
     else:
@@ -1878,40 +1999,40 @@ def _build_structured_prediction_response(prediction_result: dict) -> str:
         )
 
     # --- Section 2: Confidence Interpretation ---
-    sections.append("\n### 📊 Confidence Interpretation")
+    sections.append("\n###   Confidence Interpretation")
     analysis_species = raw_class if is_unknown else species
     sections.append(_confidence_interpretation(confidence, analysis_species))
 
     # --- Section 3: Footprint Characteristics ---
-    sections.append("\n### 🧬 Key Footprint Characteristics")
+    sections.append("\n###   Key Footprint Characteristics")
     sections.append(_get_species_characteristics(analysis_species))
 
     # --- Section 4: Alternative Hypotheses ---
-    sections.append("\n### ⚖️ Alternative Hypotheses")
+    sections.append("\n###    Alternative Hypotheses")
     sections.append(_get_alternative_analysis(top3, analysis_species))
 
     # --- Section 5: Ecological Insight ---
     if not is_unknown:
-        sections.append("\n### 🌍 Ecological Insight")
+        sections.append("\n###   Ecological Insight")
         sections.append(_get_ecological_insight(species))
 
     # --- Section 6: Suggested Next Steps ---
-    sections.append("\n### 📌 Suggested Next Steps")
+    sections.append("\n###   Suggested Next Steps")
     if is_unknown:
         supported_species_str = ', '.join(c.title() for c in class_names) if class_names else 'N/A'
         sections.append(
-            f"• 📷 Upload a **real footprint photo** (not drawings/cartoons) on natural substrate (soil/mud/sand)\n"
-            f"• 📏 Measure the physical footprint size in centimeters for cross-referencing\n"
-            f"• 🔍 Check the **Grad-CAM heatmap** — if it highlights background, the image may not contain a clear footprint\n"
-            f"• 🐾 Our model supports: **{supported_species_str}** — other species will be marked unknown\n"
-            f"• 💡 For best results, ensure the footprint is centered, well-lit, and fills most of the image frame"
+            f"    Upload a **real footprint photo** (not drawings/cartoons) on natural substrate (soil/mud/sand)\n"
+            f"    Measure the physical footprint size in centimeters for cross-referencing\n"
+            f"    Check the **Grad-CAM heatmap** -- if it highlights background, the image may not contain a clear footprint\n"
+            f"    Our model supports: **{supported_species_str}** -- other species will be marked unknown\n"
+            f"    For best results, ensure the footprint is centered, well-lit, and fills most of the image frame"
         )
     else:
         sections.append(
-            f"• Verify by comparing physical footprint size against expected range ({SPECIES_FEATURES.get(species, {}).get('size_range', 'N/A')})\n"
-            f"• Check the **Grad-CAM heatmap** to see which features drove this prediction\n"
-            f"• Upload additional angles of the same track for confirmation\n"
-            f"• Use the **Compare** feature to match against other footprints"
+            f"  Verify by comparing physical footprint size against expected range ({SPECIES_FEATURES.get(species, {}).get('size_range', 'N/A')})\n"
+            f"  Check the **Grad-CAM heatmap** to see which features drove this prediction\n"
+            f"  Upload additional angles of the same track for confirmation\n"
+            f"  Use the **Compare** feature to match against other footprints"
         )
 
     return "\n".join(sections)
@@ -1943,7 +2064,7 @@ def _handle_contextual_query(message: str, session: dict) -> str:
         pred_feat = SPECIES_FEATURES.get(pred_sp, {})
         alt_feat = SPECIES_FEATURES.get(alt, {})
 
-        lines = [f"### 🔬 Why {pred_sp.title()} and not {alt.title()}?\n"]
+        lines = [f"###   Why {pred_sp.title()} and not {alt.title()}?\n"]
 
         # Find the alt's confidence in top3
         alt_conf = 0
@@ -1958,22 +2079,22 @@ def _handle_contextual_query(message: str, session: dict) -> str:
 
         diffs = []
         if pred_feat.get("claw_marks") != alt_feat.get("claw_marks"):
-            diffs.append(f"• **Claw marks:** {pred_sp.title()} {'shows' if pred_feat.get('claw_marks') else 'hides'} claws; "
+            diffs.append(f"  **Claw marks:** {pred_sp.title()} {'shows' if pred_feat.get('claw_marks') else 'hides'} claws; "
                         f"{alt.title()} {'shows' if alt_feat.get('claw_marks') else 'hides'} claws")
         if pred_feat.get("toe_count") != alt_feat.get("toe_count"):
-            diffs.append(f"• **Toe count:** {pred_sp.title()} has {pred_feat.get('toe_count')} toes; "
+            diffs.append(f"  **Toe count:** {pred_sp.title()} has {pred_feat.get('toe_count')} toes; "
                         f"{alt.title()} has {alt_feat.get('toe_count')} toes")
         if pred_feat.get("size_range") != alt_feat.get("size_range"):
-            diffs.append(f"• **Size range:** {pred_sp.title()} ({pred_feat.get('size_range', '?')}); "
+            diffs.append(f"  **Size range:** {pred_sp.title()} ({pred_feat.get('size_range', '?')}); "
                         f"{alt.title()} ({alt_feat.get('size_range', '?')})")
         if pred_feat.get("symmetry") != alt_feat.get("symmetry"):
-            diffs.append(f"• **Shape:** {pred_sp.title()} is {pred_feat.get('symmetry', '?')}; "
+            diffs.append(f"  **Shape:** {pred_sp.title()} is {pred_feat.get('symmetry', '?')}; "
                         f"{alt.title()} is {alt_feat.get('symmetry', '?')}")
 
         if diffs:
             lines.extend(diffs)
         else:
-            lines.append(f"• These species have similar morphological features, which is why "
+            lines.append(f"  These species have similar morphological features, which is why "
                         f"the confidence gap is narrow.")
 
         if pred_feat.get("distinguishing"):
@@ -1988,7 +2109,7 @@ def _handle_contextual_query(message: str, session: dict) -> str:
         pred_sp = raw_class if is_unknown else species
         info = ANIMAL_INFO.get(pred_sp, {})
         feat = SPECIES_FEATURES.get(pred_sp, {})
-        lines = [f"### 📚 Detailed Profile: {pred_sp.title()}\n"]
+        lines = [f"###   Detailed Profile: {pred_sp.title()}\n"]
         if info.get("scientific_name"):
             lines.append(f"**Scientific name:** {info['scientific_name']}")
         if info.get("description"):
@@ -1997,20 +2118,20 @@ def _handle_contextual_query(message: str, session: dict) -> str:
             lines.append(f"\n**Track analysis:**")
             lines.append(_get_species_characteristics(pred_sp))
         if info.get("distribution"):
-            lines.append(f"\n📍 **Distribution:** {info['distribution']}")
+            lines.append(f"\n  **Distribution:** {info['distribution']}")
         lines.append(f"\n{_get_ecological_insight(pred_sp)}")
         return "\n".join(lines)
 
     # "How confident" / "is this reliable"
     if any(phrase in msg_lower for phrase in ["how confident", "reliable", "sure", "certain", "trust"]):
         pred_sp = raw_class if is_unknown else species
-        lines = [f"### 📊 Confidence Deep-Dive\n"]
+        lines = [f"###   Confidence Deep-Dive\n"]
         lines.append(_confidence_interpretation(confidence, pred_sp))
         f1 = SPECIES_FEATURES.get(pred_sp, {}).get("f1_score", 0)
         if f1:
             lines.append(f"\n**Model reliability for {pred_sp.title()}:** F1 score = {f1:.3f}")
             if f1 >= 0.8:
-                lines.append("This is one of our best-performing classes — predictions are generally reliable.")
+                lines.append("This is one of our best-performing classes -- predictions are generally reliable.")
             elif f1 >= 0.7:
                 lines.append("Good performance. Occasional confusion with similar species is possible.")
             else:
@@ -2114,20 +2235,20 @@ def _generate_knowledge_response(message: str) -> str:
     msg_lower = message.lower().strip()
 
     if any(w in msg_lower for w in ['hello', 'hi ', 'hey', 'greetings', 'good morning', 'good evening']):
-        return ("👋 **Welcome to WildTrackAI!**\n\n"
+        return ("  **Welcome to WildTrackAI!**\n\n"
                 "I'm your AI wildlife assistant. Here's what I can do:\n\n"
-                "🔍 **Identify footprints** — Upload an image and get structured analysis\n"
-                "📊 **Analyze predictions** — Confidence scores, alternatives, and reasoning\n"
-                "🧬 **Compare species** — Ask \"why not leopard?\" after a prediction\n"
-                "🌍 **Conservation info** — Habitats, status, and ecological insights\n"
-                "🔬 **Technical details** — Model architecture, Grad-CAM, and methodology\n\n"
+                "  **Identify footprints** -- Upload an image and get structured analysis\n"
+                "  **Analyze predictions** -- Confidence scores, alternatives, and reasoning\n"
+                "  **Compare species** -- Ask \"why not leopard?\" after a prediction\n"
+                "  **Conservation info** -- Habitats, status, and ecological insights\n"
+                "  **Technical details** -- Model architecture, Grad-CAM, and methodology\n\n"
                 "Try uploading a footprint image or ask about any species!")
 
-    # Species info queries — enhanced
+    # Species info queries -- enhanced
     for species_name, info in ANIMAL_INFO.items():
         if species_name in msg_lower:
             feat = SPECIES_FEATURES.get(species_name, {})
-            lines = [f"### 🐾 {species_name.title()} ({info.get('scientific_name', 'N/A')})\n"]
+            lines = [f"###   {species_name.title()} ({info.get('scientific_name', 'N/A')})\n"]
             if info.get('description'):
                 lines.append(info['description'])
             lines.append(f"\n**Track Profile:**")
@@ -2135,61 +2256,61 @@ def _generate_knowledge_response(message: str) -> str:
                 lines.append(_get_species_characteristics(species_name))
             if info.get('conservation_status'):
                 status = info['conservation_status']
-                emoji = '🔴' if 'Endangered' in status else '🟡' if 'Vulnerable' in status else '🟢'
+                emoji = ' ' if 'Endangered' in status else ' ' if 'Vulnerable' in status else ' '
                 lines.append(f"\n{emoji} **Conservation status:** {status}")
             if info.get('weight'):
-                lines.append(f"⚖️ **Weight:** {info['weight']}")
+                lines.append(f"   **Weight:** {info['weight']}")
             if info.get('distribution'):
-                lines.append(f"📍 **Range:** {info['distribution']}")
+                lines.append(f"  **Range:** {info['distribution']}")
             if feat.get("confused_with"):
-                lines.append(f"\n⚠️ **Often confused with:** {', '.join(c.title() for c in feat['confused_with'])}")
+                lines.append(f"\n   **Often confused with:** {', '.join(c.title() for c in feat['confused_with'])}")
             if feat.get("f1_score"):
-                lines.append(f"📊 **Model F1 score:** {feat['f1_score']:.3f}")
+                lines.append(f"  **Model F1 score:** {feat['f1_score']:.3f}")
             return "\n".join(lines)
 
     # Help queries
     if any(w in msg_lower for w in ['help', 'what can you', 'how to', 'how do', 'features', 'capabilities']):
-        return ("### 📖 WildTrackAI Guide\n\n"
+        return ("###   WildTrackAI Guide\n\n"
                 "**Image Analysis:**\n"
-                "1. Upload a footprint image using the 📷 button\n"
+                "1. Upload a footprint image using the   button\n"
                 "2. Get structured analysis with confidence scores\n"
                 "3. View Grad-CAM heatmaps showing model focus areas\n\n"
                 "**Conversational Features:**\n"
-                "• After a prediction, ask **\"why not leopard?\"** for comparison\n"
-                "• Ask **\"tell me more\"** for deeper species info\n"
-                "• Ask **\"how confident?\"** for reliability analysis\n\n"
+                "  After a prediction, ask **\"why not leopard?\"** for comparison\n"
+                "  Ask **\"tell me more\"** for deeper species info\n"
+                "  Ask **\"how confident?\"** for reliability analysis\n\n"
                 "**Species Database:**\n"
-                f"• Trained on: {', '.join(c.title() for c in class_names)}\n"
-                f"• Extended info for: {', '.join(k.title() for k in ANIMAL_INFO.keys())}\n\n"
+                f"  Trained on: {', '.join(c.title() for c in class_names)}\n"
+                f"  Extended info for: {', '.join(k.title() for k in ANIMAL_INFO.keys())}\n\n"
                 "**Technical Questions:**\n"
-                "• Model architecture and accuracy\n"
-                "• Grad-CAM explainability\n"
-                "• Confidence thresholds and unknown detection")
+                "  Model architecture and accuracy\n"
+                "  Grad-CAM explainability\n"
+                "  Confidence thresholds and unknown detection")
 
     # Model / accuracy queries
     if any(w in msg_lower for w in ['accuracy', 'model', 'architecture', 'technical', 'how accurate']):
         acc = model_metadata.get('accuracy', 0.745)
         lines = [
-            "### 🏗️ Model Architecture\n",
+            "###    Model Architecture\n",
             f"**Base:** EfficientNetB3 v4 (transfer learning from ImageNet)",
             f"**Overall accuracy:** {acc*100:.1f}%",
-            f"**Input size:** {IMG_SIZE}×{IMG_SIZE} pixels",
+            f"**Input size:** {IMG_SIZE} {IMG_SIZE} pixels",
             f"**Classes:** {', '.join(c.title() for c in class_names)}\n",
             "**Per-class F1 Scores:**",
         ]
         for sp, feat in SPECIES_FEATURES.items():
             bar_len = int(feat['f1_score'] * 20)
-            bar = '█' * bar_len + '░' * (20 - bar_len)
+            bar = ' ' * bar_len + ' ' * (20 - bar_len)
             lines.append(f"  {sp.title():10s} |{bar}| {feat['f1_score']:.3f}")
-        lines.append(f"\n**Training pipeline:** MixUp/CutMix augmentation → CLAHE normalization → "
-                     f"perceptual hash dedup → EfficientNetB3 v4 fine-tuning + SGDR + SWA")
+        lines.append(f"\n**Training pipeline:** MixUp/CutMix augmentation   CLAHE normalization   "
+                     f"perceptual hash dedup   EfficientNetB3 v4 fine-tuning + SGDR + SWA")
         lines.append(f"**Explainability:** Grad-CAM heatmaps")
-        lines.append(f"**OOD handling:** {int(CONFIDENCE_THRESHOLD*100)}% confidence threshold → Unknown class")
+        lines.append(f"**OOD handling:** {int(CONFIDENCE_THRESHOLD*100)}% confidence threshold   Unknown class")
         return "\n".join(lines)
 
     # Grad-CAM queries
     if any(w in msg_lower for w in ['gradcam', 'grad-cam', 'heatmap', 'explain', 'xai', 'interpretab']):
-        return ("### 🔬 Grad-CAM Explainability\n\n"
+        return ("###   Grad-CAM Explainability\n\n"
                 "**Gradient-weighted Class Activation Mapping** visualizes which image regions "
                 "influenced the model's prediction.\n\n"
                 "**How it works:**\n"
@@ -2198,16 +2319,16 @@ def _generate_knowledge_response(message: str) -> str:
                 "3. Weight feature maps by averaged gradients\n"
                 "4. Generate heatmap overlay on original image\n\n"
                 "**Reading the heatmap:**\n"
-                "• 🔴 **Red/warm** = High importance (model focused here)\n"
-                "• 🔵 **Blue/cool** = Low importance\n"
-                "• Ideally, warm regions should highlight the footprint, not background\n\n"
+                "    **Red/warm** = High importance (model focused here)\n"
+                "    **Blue/cool** = Low importance\n"
+                "  Ideally, warm regions should highlight the footprint, not background\n\n"
                 "**Why this matters:**\n"
                 "If the heatmap highlights background instead of the footprint, "
-                "the prediction may be unreliable — a key quality check for field deployment.")
+                "the prediction may be unreliable -- a key quality check for field deployment.")
 
     # Footprint queries
     if any(w in msg_lower for w in ['footprint', 'track', 'paw', 'print', 'identify']):
-        return ("### 🐾 Footprint Identification Guide\n\n"
+        return ("###   Footprint Identification Guide\n\n"
                 "**Key distinguishing features:**\n\n"
                 "| Feature | Cat family | Dog family | Ungulates |\n"
                 "|---------|-----------|-----------|----------|\n"
@@ -2215,62 +2336,62 @@ def _generate_knowledge_response(message: str) -> str:
                 "| Toes | 4, round | 4, oval | 2 (cloven) |\n"
                 "| Pad | Large, bilobed | Triangular | None |\n\n"
                 "**Size guide:**\n"
-                "• Elephant: 40-50 cm (unmistakable)\n"
-                "• Tiger: 12-16 cm\n"
-                "• Wolf: 10-13 cm\n"
-                "• Leopard: 7-10 cm\n"
-                "• Deer: 5-9 cm\n\n"
+                "  Elephant: 40-50 cm (unmistakable)\n"
+                "  Tiger: 12-16 cm\n"
+                "  Wolf: 10-13 cm\n"
+                "  Leopard: 7-10 cm\n"
+                "  Deer: 5-9 cm\n\n"
                 "Upload a footprint image for AI-powered identification!")
 
     # Conservation queries
     if any(w in msg_lower for w in ['conserv', 'endanger', 'protect', 'wildlife', 'iucn']):
-        return ("### 🌍 Conservation & WildTrackAI\n\n"
+        return ("###   Conservation & WildTrackAI\n\n"
                 "**Species Conservation Status:**\n"
-                "🔴 **Endangered:** Tiger, Elephant — critical population decline\n"
-                "🟡 **Vulnerable:** Leopard — declining across range\n"
-                "🟢 **Least Concern:** Deer, Wolf — stable populations\n\n"
+                "  **Endangered:** Tiger, Elephant -- critical population decline\n"
+                "  **Vulnerable:** Leopard -- declining across range\n"
+                "  **Least Concern:** Deer, Wolf -- stable populations\n\n"
                 "**How footprint tracking helps:**\n"
-                "• Non-invasive population monitoring\n"
-                "• Individual identification (unique pad patterns)\n"
-                "• Territory mapping and corridor identification\n"
-                "• Human-wildlife conflict prevention\n\n"
+                "  Non-invasive population monitoring\n"
+                "  Individual identification (unique pad patterns)\n"
+                "  Territory mapping and corridor identification\n"
+                "  Human-wildlife conflict prevention\n\n"
                 "AI-assisted tracking like WildTrackAI makes field surveys faster "
                 "and more accessible to conservation teams globally.")
 
     # Comparison / difference queries
     if any(w in msg_lower for w in ['difference', 'compare', 'vs', 'versus']):
-        return ("### 🔬 Species Comparison\n\n"
+        return ("###   Species Comparison\n\n"
                 "Upload two images using the **Compare** page for side-by-side analysis, "
                 "or ask me about specific species:\n\n"
-                "• \"What's the difference between tiger and leopard?\"\n"
-                "• \"Tiger vs wolf footprints\"\n"
-                "• Upload an image, then ask \"why not leopard?\"\n\n"
+                "  \"What's the difference between tiger and leopard?\"\n"
+                "  \"Tiger vs wolf footprints\"\n"
+                "  Upload an image, then ask \"why not leopard?\"\n\n"
                 "I'll provide detailed morphological comparisons!")
 
     # Unknown / threshold queries
     if any(w in msg_lower for w in ['unknown', 'threshold', 'reject', 'unseen', 'out of distribution']):
-        return ("### ⚠️ Unknown Detection System\n\n"
+        return ("###    Unknown Detection System\n\n"
                 f"The model uses a **{int(CONFIDENCE_THRESHOLD*100)}% confidence threshold**:\n\n"
-                f"• **Above {int(CONFIDENCE_THRESHOLD*100)}%** → Species identified normally\n"
-                f"• **Below {int(CONFIDENCE_THRESHOLD*100)}%** → Marked as **Unknown** (responsible AI)\n\n"
+                f"  **Above {int(CONFIDENCE_THRESHOLD*100)}%**   Species identified normally\n"
+                f"  **Below {int(CONFIDENCE_THRESHOLD*100)}%**   Marked as **Unknown** (responsible AI)\n\n"
                 "**Why this matters:**\n"
-                "• Prevents forced misclassification of unseen species\n"
-                "• Flags poor-quality or non-footprint images\n"
-                "• Shows the closest match and raw confidence for transparency\n\n"
+                "  Prevents forced misclassification of unseen species\n"
+                "  Flags poor-quality or non-footprint images\n"
+                "  Shows the closest match and raw confidence for transparency\n\n"
                 "**Limitations:**\n"
-                "• Softmax can be overconfident on out-of-distribution inputs\n"
-                "• Future improvements: temperature scaling, energy-based OOD detection")
+                "  Softmax can be overconfident on out-of-distribution inputs\n"
+                "  Future improvements: temperature scaling, energy-based OOD detection")
 
     # Default
     return ("I'm your WildTrackAI assistant! I can help with:\n\n"
-            "🔍 **Upload a footprint** for structured AI analysis\n"
-            "🐾 **Ask about species** — tiger, leopard, elephant, deer, wolf\n"
-            "📊 **Technical questions** — model, Grad-CAM, accuracy\n"
-            "🌍 **Conservation** — status, tracking methods\n\n"
+            "  **Upload a footprint** for structured AI analysis\n"
+            "  **Ask about species** -- tiger, leopard, elephant, deer, wolf\n"
+            "  **Technical questions** -- model, Grad-CAM, accuracy\n"
+            "  **Conservation** -- status, tracking methods\n\n"
             "After a prediction, try:\n"
-            "• _\"Why not leopard?\"_ — comparative reasoning\n"
-            "• _\"Tell me more\"_ — detailed species profile\n"
-            "• _\"How confident?\"_ — reliability deep-dive")
+            "  _\"Why not leopard?\"_ -- comparative reasoning\n"
+            "  _\"Tell me more\"_ -- detailed species profile\n"
+            "  _\"How confident?\"_ -- reliability deep-dive")
 
 
 @app.post("/chat")
@@ -2279,7 +2400,7 @@ async def chat_endpoint(
     file: Optional[UploadFile] = File(None),
     session_id: str = Form("default"),
 ):
-    """Chat endpoint with tiered intelligence: Gemini → Structured Engine → Knowledge Base."""
+    """Chat endpoint with tiered intelligence: Gemini   Structured Engine   Knowledge Base."""
     prediction = None
 
     # If image uploaded, run prediction

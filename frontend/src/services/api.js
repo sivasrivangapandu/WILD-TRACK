@@ -5,7 +5,7 @@ import axios from 'axios';
 
 // Smart fallback for unconfigured deployments to prevent mixed-content Network Errors
 const fallbackUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000'
+  ? 'http://127.0.0.1:8000'
   : 'https://wildtrack-backend.onrender.com';
 
 const API_BASE = import.meta.env.VITE_API_URL || fallbackUrl;
