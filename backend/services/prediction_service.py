@@ -270,10 +270,12 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         raise HTTPException(status_code=503, detail="Model not loaded. Train model first.")
 
     # Test-Time Augmentation
+    tta_predict_fn = None
     if use_tta:
         try:
             from training.train_v4 import tta_predict
-            raw_probs = tta_predict(model, img_array, n_augments=3)
+            tta_predict_fn = tta_predict
+            raw_probs = tta_predict_fn(model, img_array, n_augments=3)
         except ImportError:
             raw_probs = model.predict(img_array, verbose=0)[0]
     else:
@@ -300,12 +302,27 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
 
     predicted_idx = int(np.argmax(predictions))
     confidence = float(predictions[predicted_idx])
-    raw_class = class_names[predicted_idx] if predicted_idx < len(class_names) else "unknown"
+    sorted_idx = np.argsort(predictions)[::-1]
+    second_confidence = float(predictions[sorted_idx[1]]) if len(sorted_idx) > 1 else 0.0
+    margin = confidence - second_confidence
 
-    # Unknown threshold
-    HIGH_ENTROPY_THRESHOLD = 0.90
-    is_unknown = confidence < CONFIDENCE_THRESHOLD and entropy_ratio > HIGH_ENTROPY_THRESHOLD
-    predicted_class = "unknown" if is_unknown else raw_class
+    if use_tta and tta_predict_fn is not None and (confidence < 0.62 or margin < 0.10):
+        try:
+            extra_raw_probs = tta_predict_fn(model, img_array, n_augments=7)
+            extra_filtered_probs = pipeline.stage3_geo_filter(extra_raw_probs, lat, lon, class_names)
+            extra_predictions = pipeline.stage4_calibrate_confidence(extra_filtered_probs, TEMPERATURE)
+            predictions = (predictions + extra_predictions) / 2.0
+            predictions = predictions / np.sum(predictions)
+
+            predicted_idx = int(np.argmax(predictions))
+            confidence = float(predictions[predicted_idx])
+            sorted_idx = np.argsort(predictions)[::-1]
+            second_confidence = float(predictions[sorted_idx[1]]) if len(sorted_idx) > 1 else 0.0
+            margin = confidence - second_confidence
+        except Exception as e:
+            print(f"[DIAG] Adaptive TTA refinement skipped: {e}")
+
+    raw_class = class_names[predicted_idx] if predicted_idx < len(class_names) else "unknown"
 
     # Adaptive confidence scaling
     quality_adjusted_confidence = confidence
@@ -323,6 +340,26 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         confidence_penalty *= 0.95
 
     quality_adjusted_confidence = confidence * confidence_penalty
+
+    # Unknown threshold with ambiguity-aware gating.
+    HIGH_ENTROPY_THRESHOLD = 0.90
+    dynamic_conf_threshold = CONFIDENCE_THRESHOLD
+    if blur_level < 45:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.55)
+    elif blur_level < 60:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.50)
+
+    if entropy_ratio > 0.82:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.55)
+    if margin < 0.08:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.58)
+    elif margin < 0.15:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.50)
+
+    base_unknown = confidence < CONFIDENCE_THRESHOLD and entropy_ratio > HIGH_ENTROPY_THRESHOLD
+    ambiguous_unknown = quality_adjusted_confidence < dynamic_conf_threshold and (entropy_ratio > 0.78 or margin < 0.12)
+    is_unknown = base_unknown or ambiguous_unknown
+    predicted_class = "unknown" if is_unknown else raw_class
 
     # Top 3
     top_indices = np.argsort(predictions)[::-1][:3]
@@ -352,6 +389,11 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         so_filtered = pipeline.stage3_geo_filter(second_opinion_raw, lat, lon, class_names)
         so_calibrated = pipeline.stage4_calibrate_confidence(so_filtered, TEMPERATURE)
         consensus_result = compute_consensus(predictions, so_calibrated, class_names, CONFIDENCE_THRESHOLD)
+
+        if consensus_result and consensus_result.get("verdict_level") == "ambiguous":
+            if quality_adjusted_confidence < 0.65 or margin < 0.12:
+                is_unknown = True
+                predicted_class = "unknown"
     except Exception as e:
         print(f"Consensus validation error: {e}")
         consensus_result = None
@@ -362,6 +404,8 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         "confidence": confidence,
         "quality_adjusted_confidence": round(quality_adjusted_confidence, 4),
         "is_unknown": is_unknown,
+        "margin": round(margin, 4),
+        "dynamic_conf_threshold": round(dynamic_conf_threshold, 4),
         "entropy": round(entropy, 4),
         "entropy_ratio": round(entropy_ratio, 4),
         "max_entropy": round(max_entropy, 4),
