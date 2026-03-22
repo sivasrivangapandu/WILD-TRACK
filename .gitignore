@@ -14,6 +14,13 @@ uploads/
 # Model files (too large for git — downloaded from GitHub Releases)
 models/*.h5
 models/*.keras
+models/checkpoint_*.h5
+models/checkpoint_*.weights.h5
+models/snapshots/
+
+# Logs
+*.log
+backend/logs/
 
 # OS
 Thumbs.db
@@ -24,6 +31,22 @@ node_modules/
 dist/
 
 # Generated training datasets (local only)
-backend/dataset_strict/
-backend/dataset_quarantine_strict/
+backend/dataset*/
 backend/dataset_review.html
+
+# Test output / scratch files
+backend/test_res*.json
+backend/test_*.txt
+backend/quarantine_report.json
+backend/quarantine_r2_report.json
+backend/scaling_report.json
+backend/strict_filter_report.json
+
+# Generated outputs
+backend/outputs/
+
+# Tools
+bfg-*.jar
+
+# Generated PDFs
+*.pdf

@@ -26,7 +26,15 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 # ── JWT tokens ────────────────────────────────────────────────────
-SECRET_KEY = os.getenv("JWT_SECRET", "wildtrack-dev-secret-change-in-prod")
+_JWT_FALLBACK = "wildtrack-dev-secret-change-in-prod"
+SECRET_KEY = os.getenv("JWT_SECRET", _JWT_FALLBACK)
+if SECRET_KEY == _JWT_FALLBACK:
+    import warnings
+    warnings.warn(
+        "⚠️  JWT_SECRET not set — using insecure fallback. "
+        "Set JWT_SECRET environment variable in production!",
+        stacklevel=2,
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
