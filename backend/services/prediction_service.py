@@ -15,7 +15,7 @@ from config import (
     MODELS_DIR, OUTPUTS_DIR, METADATA_PATH,
     MODEL_PATH_KERAS, MODEL_PATH, MODEL_PATH_LEGACY,
     MODEL_PATH_V4, MODEL_PATH_V3, MODEL_URLS,
-    CONFIDENCE_THRESHOLD, ANIMAL_INFO,
+    CONFIDENCE_THRESHOLD, ANIMAL_INFO, SPECIES_FEATURES,
     CLOUDINARY_URL, CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
 )
@@ -269,6 +269,17 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded. Train model first.")
 
+    def class_threshold(class_name: str, base_threshold: float) -> float:
+        """Per-class confidence floor: harder classes require stronger evidence."""
+        f1 = SPECIES_FEATURES.get(class_name, {}).get("f1_score", 0.72)
+        if f1 >= 0.82:
+            return max(base_threshold, 0.46)
+        if f1 >= 0.76:
+            return max(base_threshold, 0.50)
+        if f1 >= 0.70:
+            return max(base_threshold, 0.55)
+        return max(base_threshold, 0.60)
+
     # Test-Time Augmentation
     tta_predict_fn = None
     if use_tta:
@@ -355,6 +366,10 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         dynamic_conf_threshold = max(dynamic_conf_threshold, 0.58)
     elif margin < 0.15:
         dynamic_conf_threshold = max(dynamic_conf_threshold, 0.50)
+
+    dynamic_conf_threshold = max(dynamic_conf_threshold, class_threshold(raw_class, CONFIDENCE_THRESHOLD))
+    if raw_class in {"tiger", "leopard", "wolf"} and margin < 0.18:
+        dynamic_conf_threshold = max(dynamic_conf_threshold, 0.60)
 
     base_unknown = confidence < CONFIDENCE_THRESHOLD and entropy_ratio > HIGH_ENTROPY_THRESHOLD
     ambiguous_unknown = quality_adjusted_confidence < dynamic_conf_threshold and (entropy_ratio > 0.78 or margin < 0.12)
