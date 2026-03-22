@@ -12,11 +12,37 @@ Design:
 """
 
 import asyncio
+import os
 import random
+import re
 from typing import AsyncGenerator, Optional, Dict, Any
 import logging
 
+import requests
+
+try:
+    import google.generativeai as genai
+except Exception:  # pragma: no cover - import guard for constrained envs
+    genai = None
+
 logger = logging.getLogger(__name__)
+
+
+# Optional external intelligence providers
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+NINJA_API_KEY = os.getenv("NINJA_API_KEY", "")
+
+_gemini_model = None
+if GEMINI_API_KEY and genai is not None:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+        logger.info("Gemini enabled for chat streaming")
+    except Exception as exc:
+        logger.warning("Gemini initialization failed; falling back to local engine: %s", exc)
+
+
+_animal_facts_cache: Dict[str, Dict[str, Any]] = {}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -99,7 +125,7 @@ async def get_model_tokens(
     authoritative, species-specific analysis.
     """
     try:
-        response = _build_response(message, context)
+        response = await _resolve_response(message, context)
         tokens = response.split(" ")
         
         for i, token in enumerate(tokens):
@@ -115,6 +141,179 @@ async def get_model_tokens(
     except Exception as e:
         logger.error(f"Error during token generation: {e}")
         raise
+
+
+async def _resolve_response(message: str, context: Optional[Dict[str, Any]] = None) -> str:
+    """Resolve response with deterministic, API, and LLM tiers."""
+    context = context or {}
+    msg_lower = message.lower().strip()
+
+    # Deterministic first for reliability and consistency.
+    prediction = context.get("prediction")
+    if prediction:
+        return _build_prediction_response(message, prediction)
+
+    direct_fact_response = _match_direct_facts(msg_lower)
+    if direct_fact_response:
+        return direct_fact_response
+
+    species_response = _match_species_query(msg_lower)
+    if species_response:
+        return species_response
+
+    topic_response = _match_topic(msg_lower)
+    if topic_response:
+        return topic_response
+
+    # Targeted external species knowledge for animals outside local profile set.
+    animal_api_response = _build_external_animal_response(msg_lower)
+    if animal_api_response:
+        return animal_api_response
+
+    # General wildlife questions -> Gemini (if configured).
+    gemini_response = await _build_gemini_response(message, context)
+    if gemini_response:
+        return gemini_response
+
+    return _build_general_response(msg_lower)
+
+
+def _extract_animal_target(msg_lower: str) -> Optional[str]:
+    """Extract a probable animal name from free-form query text."""
+    blocked = {
+        "wildlife", "animal", "animals", "species", "footprint", "footprints", "track", "tracks",
+        "model", "gradcam", "grad-cam", "heatmap", "confidence", "conservation", "how", "what",
+        "why", "tell", "about", "there", "many", "are", "is", "the", "a", "an",
+    }
+
+    patterns = [
+        r"(?:tell me about|facts about|info on|information on|what do you know about)\s+([a-z\-\s]{2,40})",
+        r"(?:what is|who is)\s+(?:a|an|the)?\s*([a-z\-\s]{2,40})",
+        r"(?:habitat of|diet of|lifespan of)\s+([a-z\-\s]{2,40})",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, msg_lower)
+        if match:
+            candidate = re.sub(r"\s+", " ", match.group(1)).strip(" .?!,")
+            if candidate and candidate not in blocked:
+                return candidate
+
+    tokens = re.findall(r"[a-z\-]{3,}", msg_lower)
+    for token in tokens:
+        if token not in blocked and token not in SPECIES_PROFILES:
+            return token
+    return None
+
+
+def _fetch_animal_facts(animal_name: str) -> Optional[Dict[str, Any]]:
+    """Fetch animal facts from API Ninjas with simple in-memory cache."""
+    if not NINJA_API_KEY:
+        return None
+
+    key = animal_name.lower().strip()
+    if key in _animal_facts_cache:
+        return _animal_facts_cache[key]
+
+    try:
+        resp = requests.get(
+            "https://api.api-ninjas.com/v1/animals",
+            params={"name": key},
+            headers={"X-Api-Key": NINJA_API_KEY},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if not isinstance(data, list) or not data:
+            return None
+        _animal_facts_cache[key] = data[0]
+        return data[0]
+    except Exception as exc:
+        logger.info("Animal API lookup failed for '%s': %s", animal_name, exc)
+        return None
+
+
+def _build_external_animal_response(msg_lower: str) -> Optional[str]:
+    """Return formatted animal profile for non-local species queries."""
+    animal = _extract_animal_target(msg_lower)
+    if not animal:
+        return None
+
+    data = _fetch_animal_facts(animal)
+    if not data:
+        return None
+
+    name = data.get("name", animal).title()
+    taxonomy = data.get("taxonomy", {}) or {}
+    characteristics = data.get("characteristics", {}) or {}
+    locations = data.get("locations", []) or []
+
+    lines = [f"### {name} Wildlife Profile\n"]
+    if taxonomy:
+        lines.append("**Taxonomy:**")
+        for k in ["kingdom", "phylum", "class", "order", "family", "genus", "scientific_name"]:
+            if taxonomy.get(k):
+                lines.append(f"• {k.replace('_', ' ').title()}: {taxonomy[k]}")
+
+    if characteristics:
+        lines.append("\n**Key Characteristics:**")
+        for k in ["prey", "name_of_young", "group_behavior", "estimated_population_size", "biggest_threat", "most_distinctive_feature", "gestation_period", "habitat", "diet", "lifestyle", "common_name", "number_of_species", "location"]:
+            if characteristics.get(k):
+                lines.append(f"• {k.replace('_', ' ').title()}: {characteristics[k]}")
+
+    if locations:
+        lines.append(f"\n**Geographic Range:** {', '.join(locations[:12])}")
+
+    lines.append(
+        "\nField note: This info is general wildlife data. For footprint classification in this app, "
+        "the trained track-ID classes are Tiger, Leopard, Elephant, Deer, and Wolf."
+    )
+    return "\n".join(lines)
+
+
+async def _build_gemini_response(message: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Use Gemini for open-domain wildlife Q&A when configured."""
+    if _gemini_model is None:
+        return None
+
+    context = context or {}
+    prediction = context.get("prediction")
+
+    system_prompt = (
+        "You are WildTrackAI, a wildlife and animal-tracking assistant. "
+        "Answer wildlife questions accurately and clearly. "
+        "If the user asks about footprint classification capability, state this app classifies: "
+        "Tiger, Leopard, Elephant, Deer, Wolf. "
+        "For any other wildlife question, provide high-quality educational guidance in markdown. "
+        "Do not invent numeric claims when uncertain."
+    )
+
+    user_parts = [f"User question: {message.strip() or 'Tell me about wildlife tracking.'}"]
+    if prediction:
+        user_parts.append(f"Prediction context: {prediction}")
+
+    def _call_gemini() -> Optional[str]:
+        response = _gemini_model.generate_content(
+            [
+                {"role": "user", "parts": [f"System instructions:\n{system_prompt}"]},
+                {"role": "model", "parts": ["Understood. I will answer as WildTrackAI."]},
+                {"role": "user", "parts": ["\n\n".join(user_parts)]},
+            ],
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.5,
+                max_output_tokens=700,
+            ),
+        )
+        if response and getattr(response, "text", None):
+            return response.text.strip()
+        return None
+
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(_call_gemini), timeout=15)
+    except Exception as exc:
+        logger.info("Gemini fallback triggered: %s", exc)
+        return None
 
 
 def _build_response(
