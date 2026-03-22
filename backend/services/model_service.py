@@ -134,19 +134,66 @@ def _build_response(
     # Priority 1: Prediction-aware analysis
     if prediction:
         return _build_prediction_response(message, prediction)
+
+    # Priority 2: Direct factual intents (count/list/capability)
+    direct_fact_response = _match_direct_facts(msg_lower)
+    if direct_fact_response:
+        return direct_fact_response
     
-    # Priority 2: Topic-specific expertise
+    # Priority 3: Topic-specific expertise
     topic_response = _match_topic(msg_lower)
     if topic_response:
         return topic_response
     
-    # Priority 3: Species-specific questions
+    # Priority 4: Species-specific questions
     species_response = _match_species_query(msg_lower)
     if species_response:
         return species_response
     
-    # Priority 4: Intelligent general response
+    # Priority 5: Intelligent general response
     return _build_general_response(msg_lower)
+
+
+def _match_direct_facts(msg_lower: str) -> Optional[str]:
+    """Return concise, high-precision answers for factual chat intents."""
+    species_names = [profile["name"] for profile in SPECIES_PROFILES.values()]
+    species_count = len(species_names)
+    species_list = ", ".join(species_names)
+
+    count_markers = [
+        "how many species",
+        "number of species",
+        "how many animal species",
+        "species count",
+        "total species",
+    ]
+    list_markers = [
+        "which species",
+        "what species",
+        "species are there",
+        "supported species",
+        "available species",
+    ]
+
+    if any(marker in msg_lower for marker in count_markers):
+        return (
+            f"WildTrackAI currently supports **{species_count} species**: "
+            f"**{species_list}**."
+        )
+
+    if any(marker in msg_lower for marker in list_markers):
+        return (
+            f"WildTrackAI can identify these species: **{species_list}** "
+            f"({species_count} total)."
+        )
+
+    if "can you identify" in msg_lower or "what can you identify" in msg_lower:
+        return (
+            f"I can identify **{species_count} wildlife footprint classes** right now: "
+            f"**{species_list}**."
+        )
+
+    return None
 
 
 def _build_prediction_response(message: str, prediction: dict) -> str:
