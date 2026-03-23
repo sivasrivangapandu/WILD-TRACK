@@ -12,9 +12,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import Skeleton from '../components/Skeleton';
-import api from '../services/api';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import api, { API_BASE } from '../services/api';
 
 /* ═══ Page entrance variants ═══ */
 const pageVariants = {

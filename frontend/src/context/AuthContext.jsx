@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api, { API_BASE } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -15,8 +15,7 @@ export function AuthProvider({ children }) {
   const resolveAvatar = (u) => {
     if (!u) return u;
     if (u.avatar && u.avatar.startsWith('/uploads')) {
-      const base = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      return { ...u, avatar: `${base}${u.avatar}` };
+      return { ...u, avatar: `${API_BASE}${u.avatar}` };
     }
     return u;
   };

@@ -16,7 +16,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: CORS_ORIGINS
-        value: https://wildtrack-frontend.onrender.com
+        value: https://wildtrack-frontend-iuww.onrender.com,https://wildtrack-frontend.onrender.com
       - key: JWT_SECRET
         generateValue: true
       - key: GEMINI_API_KEY
@@ -40,7 +40,7 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://wildtrack-backend.onrender.com
+        value: https://wildtrack-backend-j9n8.onrender.com
     routes:
       # React SPA routing rule
       - type: rewrite
