@@ -16,11 +16,11 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from config import ANIMAL_INFO, NINJA_API_KEY, GEMINI_API_KEY
+from config import ANIMAL_INFO, NINJA_API_KEY
 from database import get_db
 from models import Prediction
 from services.prediction_service import class_names
-from services.chat_service import gemini_model
+from services.gemini_provider import is_gemini_available, generate_gemini_text
 
 router = APIRouter()
 
@@ -102,10 +102,8 @@ async def species_search(req: SpeciesSearchRequest):
             _species_search_cache[query] = result
             return result
 
-    if gemini_model is None:
+    if not is_gemini_available():
         raise HTTPException(status_code=503, detail="Gemini AI not available. Set GEMINI_API_KEY.")
-
-    import google.generativeai as genai
 
     prompt = f"""You are a wildlife tracking expert and zoologist.
 A user searched for: "{req.query}"
@@ -133,14 +131,13 @@ If the query is not a real animal, respond with:
 """
 
     try:
-        response = gemini_model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3, max_output_tokens=1000,
-            )
+        raw_text = generate_gemini_text(
+            prompt=prompt,
+            temperature=0.3,
+            max_output_tokens=1000,
         )
-
-        raw_text = response.text.strip()
+        if not raw_text:
+            raise HTTPException(status_code=502, detail="AI returned empty response. Try again.")
         if raw_text.startswith("```"):
             raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
             if raw_text.endswith("```"):

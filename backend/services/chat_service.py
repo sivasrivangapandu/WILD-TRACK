@@ -10,21 +10,12 @@ import time
 from collections import defaultdict
 
 from config import (
-    GEMINI_API_KEY, ANIMAL_INFO, SPECIES_FEATURES, CONFIDENCE_THRESHOLD,
+    ANIMAL_INFO, SPECIES_FEATURES, CONFIDENCE_THRESHOLD,
 )
+from services.gemini_provider import is_gemini_available, generate_gemini_text
 
-# ── Gemini Initialization ─────────────────────────────────────────
-gemini_model = None
-if GEMINI_API_KEY:
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_API_KEY)
-        gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        print(f"  [OK] Gemini AI initialized (gemini-2.0-flash)")
-    except Exception as e:
-        print(f"  [WARN] Gemini init failed: {e} -- falling back to rule-based chat")
-else:
-    print("  [WARN] No GEMINI_API_KEY found -- using rule-based chat")
+# Backward-compatible symbol for other modules that check truthiness.
+gemini_model = object() if is_gemini_available() else None
 
 
 # ── System Prompt ─────────────────────────────────────────────────
@@ -460,25 +451,19 @@ def generate_chat_response(message: str, prediction_result: dict = None, session
     prediction_context = "\n".join(context_parts) if context_parts else ""
 
     # Tier 1: Try Gemini
-    if gemini_model:
+    if is_gemini_available():
         try:
-            import google.generativeai as genai
             user_prompt = message.strip() or "Analyze this footprint"
             if prediction_context:
                 user_prompt = f"{prediction_context}\n\n**User message:** {user_prompt}"
 
-            response = gemini_model.generate_content(
-                [
-                    {"role": "user", "parts": [f"System Instructions:\n{WILDTRACK_SYSTEM_PROMPT}"]},
-                    {"role": "model", "parts": ["Understood. I'm the WildTrackAI assistant."]},
-                    {"role": "user", "parts": [user_prompt]},
-                ],
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=1000, temperature=0.7,
-                ),
+            result_text = generate_gemini_text(
+                prompt=user_prompt,
+                system_prompt=WILDTRACK_SYSTEM_PROMPT,
+                temperature=0.7,
+                max_output_tokens=1000,
             )
-            if response and response.text:
-                result_text = response.text.strip()
+            if result_text:
                 _update_session(session_id, message, result_text, prediction_result)
                 return result_text
         except Exception as e:

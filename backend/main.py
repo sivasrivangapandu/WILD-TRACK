@@ -43,11 +43,9 @@ from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel
 import uvicorn
 
-# Google Gemini AI
-import google.generativeai as genai
-
 from database import SessionLocal, init_db, DB_PATH
 from models import Prediction
+from services.gemini_provider import is_gemini_available, generate_gemini_text
 
 # Chat streaming and database routes
 from routes import chat_router, chat_db_router, auth_router
@@ -79,18 +77,8 @@ IMG_SIZE = 300
 # Confidence threshold -- below this, prediction is "unknown"
 CONFIDENCE_THRESHOLD = 0.40
 
-# Gemini AI Configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-gemini_model = None
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        print(f"  [OK] Gemini AI initialized (gemini-2.0-flash)")
-    except Exception as e:
-        print(f"  [WARN] Gemini init failed: {e} -- falling back to rule-based chat")
-else:
-    print("  [WARN] No GEMINI_API_KEY found -- using rule-based chat")
+# Gemini availability is centralized in services.gemini_provider.
+gemini_model = object() if is_gemini_available() else None
 
 # API Ninjas Configuration
 NINJA_API_KEY = os.getenv("NINJA_API_KEY", "")
@@ -1039,7 +1027,7 @@ async def health_check(request: Request):
         "classes": len(class_names),
         "class_names": class_names if len(class_names) <= 10 else class_names[:10],
         "database": os.path.exists(DB_PATH),
-        "gemini_ai": gemini_model is not None,
+        "gemini_ai": is_gemini_available(),
         "ninja_api": bool(NINJA_API_KEY),
         "timestamp": datetime.datetime.utcnow().isoformat(),
     }
@@ -1399,7 +1387,7 @@ async def species_search(req: SpeciesSearchRequest):
             return result
     
     # Use Gemini AI for unknown species
-    if gemini_model is None:
+    if not is_gemini_available():
         raise HTTPException(
             status_code=503,
             detail="Gemini AI not available. Set GEMINI_API_KEY environment variable."
@@ -1431,15 +1419,13 @@ If the query is not a real animal or you can't identify it, respond with:
 """
     
     try:
-        response = gemini_model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3,
-                max_output_tokens=1000,
-            )
+        raw_text = generate_gemini_text(
+            prompt=prompt,
+            temperature=0.3,
+            max_output_tokens=1000,
         )
-        
-        raw_text = response.text.strip()
+        if not raw_text:
+            raise HTTPException(status_code=502, detail="AI returned empty response. Try again.")
         # Clean markdown code blocks if present
         if raw_text.startswith("```"):
             raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
@@ -2247,25 +2233,19 @@ def generate_chat_response(message: str, prediction_result: dict = None, session
     prediction_context = "\n".join(context_parts) if context_parts else ""
 
     # ------ Tier 1: Try Gemini ------
-    if gemini_model:
+    if is_gemini_available():
         try:
             user_prompt = message.strip() or "Analyze this footprint"
             if prediction_context:
                 user_prompt = f"{prediction_context}\n\n**User message:** {user_prompt}"
 
-            response = gemini_model.generate_content(
-                [
-                    {"role": "user", "parts": [f"System Instructions:\n{WILDTRACK_SYSTEM_PROMPT}"]},
-                    {"role": "model", "parts": ["Understood. I'm the WildTrackAI assistant, ready to help with structured footprint analysis and species information."]},
-                    {"role": "user", "parts": [user_prompt]},
-                ],
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=1000,
-                    temperature=0.7,
-                ),
+            result_text = generate_gemini_text(
+                prompt=user_prompt,
+                system_prompt=WILDTRACK_SYSTEM_PROMPT,
+                temperature=0.7,
+                max_output_tokens=1000,
             )
-            if response and response.text:
-                result_text = response.text.strip()
+            if result_text:
                 _update_session(session_id, message, result_text, prediction_result)
                 return result_text
         except Exception as e:

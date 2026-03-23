@@ -19,27 +19,13 @@ from typing import AsyncGenerator, Optional, Dict, Any
 import logging
 
 import requests
-
-try:
-    import google.generativeai as genai
-except Exception:  # pragma: no cover - import guard for constrained envs
-    genai = None
+from services.gemini_provider import is_gemini_available, generate_gemini_text
 
 logger = logging.getLogger(__name__)
 
 
 # Optional external intelligence providers
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 NINJA_API_KEY = os.getenv("NINJA_API_KEY", "")
-
-_gemini_model = None
-if GEMINI_API_KEY and genai is not None:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-        logger.info("Gemini enabled for chat streaming")
-    except Exception as exc:
-        logger.warning("Gemini initialization failed; falling back to local engine: %s", exc)
 
 
 _animal_facts_cache: Dict[str, Dict[str, Any]] = {}
@@ -274,7 +260,7 @@ def _build_external_animal_response(msg_lower: str) -> Optional[str]:
 
 async def _build_gemini_response(message: str, context: Optional[Dict[str, Any]] = None) -> Optional[str]:
     """Use Gemini for open-domain wildlife Q&A when configured."""
-    if _gemini_model is None:
+    if not is_gemini_available():
         return None
 
     context = context or {}
@@ -294,20 +280,12 @@ async def _build_gemini_response(message: str, context: Optional[Dict[str, Any]]
         user_parts.append(f"Prediction context: {prediction}")
 
     def _call_gemini() -> Optional[str]:
-        response = _gemini_model.generate_content(
-            [
-                {"role": "user", "parts": [f"System instructions:\n{system_prompt}"]},
-                {"role": "model", "parts": ["Understood. I will answer as WildTrackAI."]},
-                {"role": "user", "parts": ["\n\n".join(user_parts)]},
-            ],
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.5,
-                max_output_tokens=700,
-            ),
+        return generate_gemini_text(
+            prompt="\n\n".join(user_parts),
+            system_prompt=system_prompt,
+            temperature=0.5,
+            max_output_tokens=700,
         )
-        if response and getattr(response, "text", None):
-            return response.text.strip()
-        return None
 
     try:
         return await asyncio.wait_for(asyncio.to_thread(_call_gemini), timeout=15)
