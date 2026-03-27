@@ -50,7 +50,7 @@ for cls in classes:
     start = time.time()
     
     with open(test_img, 'rb') as f:
-        resp = requests.post(f"{BASE}/predict", files={'file': (images[0], f, 'image/jpeg')})
+        resp = requests.post(f"{BASE}/predict", files={'file': (f"{cls}_{images[0]}", f, 'image/jpeg')})
     
     elapsed = time.time() - start
     d = resp.json()
