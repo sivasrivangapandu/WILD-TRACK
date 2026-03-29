@@ -53,7 +53,11 @@ export default function LoginPage() {
       const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.message || 'Something went wrong');
+      const msg = String(err?.message || '').trim();
+      const friendly = /network error|timeout|failed to fetch|service unavailable|502|503|504/i.test(msg)
+        ? 'Server is temporarily unavailable or waking up. Please retry in a few seconds.'
+        : (msg || 'Something went wrong');
+      setError(friendly);
     } finally {
       setLoading(false);
     }

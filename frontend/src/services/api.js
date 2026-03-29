@@ -14,6 +14,9 @@ const DEFAULT_TIMEOUT_MS = 120000;
 const PREDICT_TIMEOUT_MS = 300000;
 const PREDICT_RETRY_COUNT = 1;
 const PREDICT_RETRY_DELAY_MS = 1500;
+const AUTH_TIMEOUT_MS = 45000;
+const AUTH_RETRY_COUNT = 1;
+const AUTH_RETRY_DELAY_MS = 1200;
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -29,6 +32,44 @@ const isRetryablePredictError = (err) => {
   if (err.status === 503 || err.status === 504) return true;
   const msg = String(err.message || '').toLowerCase();
   return msg.includes('timeout') || msg.includes('network error');
+};
+
+const isRetryableAuthError = (err) => {
+  if (!err) return false;
+  if (err.isTimeout) return true;
+  if (err.code === 'ECONNABORTED') return true;
+  if (err.status === 502 || err.status === 503 || err.status === 504) return true;
+  if (err.status === 429) return true;
+  const msg = String(err.message || '').toLowerCase();
+  return msg.includes('network error') || msg.includes('timeout') || msg.includes('failed to fetch');
+};
+
+const warmupBackend = async () => {
+  try {
+    await api.get('/health', { timeout: 15000 });
+  } catch {
+    // Best-effort warmup only.
+  }
+};
+
+const postWithRetry = async (url, body, options = {}) => {
+  const timeoutMs = options.timeoutMs || AUTH_TIMEOUT_MS;
+  const maxRetries = Number.isInteger(options.retries) ? options.retries : AUTH_RETRY_COUNT;
+  const retryDelayMs = Number.isInteger(options.retryDelayMs) ? options.retryDelayMs : AUTH_RETRY_DELAY_MS;
+
+  let attempt = 0;
+  while (true) {
+    try {
+      return await api.post(url, body, { timeout: timeoutMs });
+    } catch (err) {
+      if (attempt >= maxRetries || !isRetryableAuthError(err)) {
+        throw err;
+      }
+      attempt += 1;
+      await warmupBackend();
+      await sleep(retryDelayMs);
+    }
+  }
 };
 
 // ── Attach JWT token to every request ─────────────────────────────
@@ -70,10 +111,10 @@ const apiService = {
 
   // ── Auth ────────────────────────────────────────────────────────
   register: (name, email, password) =>
-    api.post('/api/auth/register', { name, email, password }),
+    postWithRetry('/api/auth/register', { name, email, password }),
 
   login: (email, password) =>
-    api.post('/api/auth/login', { email, password }),
+    postWithRetry('/api/auth/login', { email, password }),
 
   getMe: () =>
     api.get('/api/auth/me', { params: _tokenParam() }),
