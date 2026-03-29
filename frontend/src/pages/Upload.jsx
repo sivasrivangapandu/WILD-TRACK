@@ -488,7 +488,12 @@ export default function UploadPage() {
       const resData = await api.predict(file, null); // Skip location parameter in api wrapper too
       updateState({ result: resData.data });
     } catch (err) {
-      updateState({ error: err.message || 'Prediction failed' });
+      const timeoutMessage = 'Prediction is taking longer than expected. The server may be waking up. Please wait a few seconds and try again.';
+      const msg = String(err?.message || '');
+      const friendlyError = /timeout|timed out|econnaborted/i.test(msg)
+        ? timeoutMessage
+        : (msg || 'Prediction failed');
+      updateState({ error: friendlyError });
     } finally {
       updateState({ loading: false });
     }

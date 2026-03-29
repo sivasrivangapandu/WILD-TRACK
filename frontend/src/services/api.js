@@ -10,10 +10,26 @@ const fallbackUrl = window.location.hostname === 'localhost' || window.location.
 
 export const API_BASE = import.meta.env.VITE_API_URL || fallbackUrl;
 
+const DEFAULT_TIMEOUT_MS = 120000;
+const PREDICT_TIMEOUT_MS = 300000;
+const PREDICT_RETRY_COUNT = 1;
+const PREDICT_RETRY_DELAY_MS = 1500;
+
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 120000,
+  timeout: DEFAULT_TIMEOUT_MS,
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryablePredictError = (err) => {
+  if (!err) return false;
+  if (err.isTimeout) return true;
+  if (err.code === 'ECONNABORTED') return true;
+  if (err.status === 503 || err.status === 504) return true;
+  const msg = String(err.message || '').toLowerCase();
+  return msg.includes('timeout') || msg.includes('network error');
+};
 
 // ── Attach JWT token to every request ─────────────────────────────
 api.interceptors.request.use((config) => {
@@ -34,7 +50,12 @@ api.interceptors.response.use(
       localStorage.removeItem('wildtrack_token');
       localStorage.removeItem('wildtrack_user');
     }
-    throw { message, status: error.response?.status };
+
+    const normalizedError = new Error(message);
+    normalizedError.status = error.response?.status;
+    normalizedError.code = error.code;
+    normalizedError.isTimeout = error.code === 'ECONNABORTED' || /timeout/i.test(String(message));
+    throw normalizedError;
   }
 );
 
@@ -79,16 +100,33 @@ const apiService = {
     api.delete('/api/auth/account', { params: _tokenParam() }),
 
   // ── Predictions ─────────────────────────────────────────────────
-  predict: (file, location = null) => {
+  predict: async (file, location = null, options = {}) => {
+    const timeoutMs = options.timeoutMs || PREDICT_TIMEOUT_MS;
+    const maxRetries = Number.isInteger(options.retries) ? options.retries : PREDICT_RETRY_COUNT;
+    const retryDelayMs = Number.isInteger(options.retryDelayMs) ? options.retryDelayMs : PREDICT_RETRY_DELAY_MS;
+
     const formData = new FormData();
     formData.append('file', file);
     if (location) {
       if (location.lat) formData.append('latitude', location.lat);
       if (location.lng) formData.append('longitude', location.lng);
     }
-    return api.post('/predict', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+
+    let attempt = 0;
+    while (true) {
+      try {
+        return await api.post('/predict', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: timeoutMs,
+        });
+      } catch (err) {
+        if (attempt >= maxRetries || !isRetryablePredictError(err)) {
+          throw err;
+        }
+        attempt += 1;
+        await sleep(retryDelayMs);
+      }
+    }
   },
 
   predictBatch: (files) => {
