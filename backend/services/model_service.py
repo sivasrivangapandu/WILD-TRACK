@@ -15,6 +15,7 @@ import asyncio
 import os
 import random
 import re
+import urllib.parse
 from typing import AsyncGenerator, Optional, Dict, Any
 import logging
 
@@ -156,6 +157,11 @@ async def _resolve_response(message: str, context: Optional[Dict[str, Any]] = No
     if animal_api_response:
         return animal_api_response
 
+    # General encyclopedic fallback for open-domain queries.
+    wiki_response = _build_wikipedia_response(msg_lower)
+    if wiki_response:
+        return wiki_response
+
     # General wildlife questions -> Gemini (if configured).
     gemini_response = await _build_gemini_response(message, context)
     if gemini_response:
@@ -255,6 +261,97 @@ def _build_external_animal_response(msg_lower: str) -> Optional[str]:
         "\nField note: This info is general wildlife data. For footprint classification in this app, "
         "the trained track-ID classes are Tiger, Leopard, Elephant, Deer, and Wolf."
     )
+    return "\n".join(lines)
+
+
+def _extract_topic_target(msg_lower: str) -> Optional[str]:
+    """Extract probable general topic from free-form questions."""
+    patterns = [
+        r"(?:what is|what are|who is|who are|define|explain)\s+(?:the\s+)?([a-z0-9\-\s]{3,80})",
+        r"(?:tell me about|information on|info on)\s+([a-z0-9\-\s]{3,80})",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, msg_lower)
+        if not match:
+            continue
+        candidate = re.sub(r"\s+", " ", match.group(1)).strip(" .?!,")
+        if candidate:
+            return candidate
+    return None
+
+
+def _fetch_wikipedia_summary(topic: str) -> Optional[Dict[str, str]]:
+    """Fetch a concise summary from Wikipedia using open search + summary APIs."""
+    try:
+        search_resp = requests.get(
+            "https://en.wikipedia.org/w/api.php",
+            params={
+                "action": "opensearch",
+                "search": topic,
+                "limit": 1,
+                "namespace": 0,
+                "format": "json",
+            },
+            timeout=8,
+        )
+        if search_resp.status_code != 200:
+            return None
+
+        payload = search_resp.json()
+        if not isinstance(payload, list) or len(payload) < 2 or not payload[1]:
+            return None
+
+        title = str(payload[1][0]).strip()
+        if not title:
+            return None
+
+        summary_url = (
+            "https://en.wikipedia.org/api/rest_v1/page/summary/"
+            + urllib.parse.quote(title, safe="")
+        )
+        summary_resp = requests.get(summary_url, timeout=8)
+        if summary_resp.status_code != 200:
+            return None
+
+        summary = summary_resp.json()
+        extract = summary.get("extract")
+        if not extract:
+            return None
+
+        return {
+            "title": summary.get("title", title),
+            "extract": str(extract).strip(),
+            "url": summary.get("content_urls", {}).get("desktop", {}).get("page", ""),
+        }
+    except Exception as exc:
+        logger.info("Wikipedia lookup failed for '%s': %s", topic, exc)
+        return None
+
+
+def _build_wikipedia_response(msg_lower: str) -> Optional[str]:
+    """Return a general-topic response for non-species open questions."""
+    topic = _extract_topic_target(msg_lower)
+    if not topic:
+        return None
+
+    # Keep local species profile answers deterministic and fast.
+    if topic in SPECIES_PROFILES:
+        return None
+
+    summary = _fetch_wikipedia_summary(topic)
+    if not summary:
+        return None
+
+    lines = [
+        f"### {summary['title']}",
+        "",
+        summary["extract"],
+        "",
+        "If you want, I can also relate this topic to wildlife tracking and footprint interpretation in field conditions.",
+    ]
+    if summary.get("url"):
+        lines.append(f"Source: {summary['url']}")
     return "\n".join(lines)
 
 
@@ -474,6 +571,28 @@ def _match_species_query(msg_lower: str) -> Optional[str]:
 
 def _build_general_response(msg_lower: str) -> str:
     """Build an intelligent general response."""
+    if any(w in msg_lower for w in ["amazon forest", "amazon rainforest", "rain forest", "rainforest"]):
+        return (
+            "### Amazon Rainforest\n\n"
+            "The Amazon Rainforest is the world's largest tropical rainforest, spanning multiple South American countries, "
+            "with most of it in Brazil. It is one of the most biodiverse ecosystems on Earth and plays a major role in "
+            "global climate regulation and freshwater cycling.\n\n"
+            "**Why it matters for wildlife tracking:**\n"
+            "• Extremely high species density makes field identification challenging\n"
+            "• Wet substrates can preserve fresh tracks but heavy rain can erase them quickly\n"
+            "• Repeated track surveys help monitor biodiversity and corridor use\n\n"
+            "If you want, I can also explain how to identify feline vs canid tracks in rainforest conditions."
+        )
+
+    if any(w in msg_lower for w in ["forest", "ecosystem", "habitat", "biome"]) and any(w in msg_lower for w in ["what is", "explain", "tell me about"]):
+        return (
+            "### Habitat And Ecosystem Overview\n\n"
+            "A habitat is the local environment where a species lives (food, shelter, water, breeding space). "
+            "An ecosystem is the broader network of organisms plus climate, soil, water, and ecological interactions.\n\n"
+            "For wildlife tracking, habitat context is essential because substrate type, moisture, and vegetation directly "
+            "influence track clarity and persistence."
+        )
+
     if any(w in msg_lower for w in ["hello", "hi ", "hey", "greetings"]):
         return (
             "### Welcome to WildTrackAI\n\n"

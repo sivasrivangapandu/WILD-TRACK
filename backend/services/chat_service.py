@@ -328,6 +328,21 @@ def _generate_knowledge_response(message: str, class_names: list = None) -> str:
         class_names = []
     msg_lower = message.lower().strip()
 
+    if any(w in msg_lower for w in ['amazon forest', 'amazon rainforest', 'rain forest', 'rainforest']):
+        return ("### Amazon Rainforest\n\n"
+                "The Amazon Rainforest is the largest tropical rainforest in the world and one of the most biodiverse ecosystems. "
+                "It is crucial for climate regulation, freshwater cycling, and habitat stability across South America.\n\n"
+                "**Tracking relevance:**\n"
+                "• High humidity and rain can quickly degrade tracks\n"
+                "• Muddy substrates preserve details but require fast documentation\n"
+                "• Repeated surveys help map wildlife corridors and species presence")
+
+    if any(w in msg_lower for w in ['forest', 'ecosystem', 'habitat', 'biome']) and any(w in msg_lower for w in ['what is', 'explain', 'tell me about']):
+        return ("### Habitat And Ecosystem Overview\n\n"
+                "A habitat is the specific environment where a species lives. An ecosystem includes that habitat plus all biological "
+                "interactions and environmental processes.\n\n"
+                "For footprint analysis, habitat context matters because substrate type and moisture directly affect track clarity.")
+
     if any(w in msg_lower for w in ['hello', 'hi ', 'hey', 'greetings', 'good morning', 'good evening']):
         return ("👋 **Welcome to WildTrackAI!**\n\n"
                 "I'm your AI wildlife assistant. Here's what I can do:\n\n"

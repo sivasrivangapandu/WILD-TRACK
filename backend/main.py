@@ -33,7 +33,6 @@ from contextlib import asynccontextmanager
 
 import numpy as np
 import cv2
-import tensorflow as tf
 from PIL import Image
 from dotenv import load_dotenv
 
@@ -107,6 +106,7 @@ init_db()
 # ============================================
 # MODEL LOADING
 # ============================================
+tf = None
 model = None
 model_metadata = {}
 class_names = []
@@ -230,12 +230,35 @@ def download_models_if_missing():
 
 def load_model():
     """Load the trained model and metadata at startup."""
-    global model, model_metadata, class_names, gradcam, IMG_SIZE, model_load_diagnostics
+    global tf, model, model_metadata, class_names, gradcam, IMG_SIZE, model_load_diagnostics
 
     # Download models if not present (cloud deployment)
     download_models_if_missing()
 
-    import tensorflow as tf
+    # On restricted Windows environments, importing TensorFlow can be blocked by
+    # application control policy. Keep this opt-in to avoid disabling predictions by default.
+    skip_model_load = os.getenv("WILDTRACK_SKIP_MODEL_LOAD", "0").strip().lower() in {"1", "true", "yes"}
+    if os.name == "nt" and skip_model_load:
+        model = None
+        model_load_diagnostics = {
+            "loaded_from": None,
+            "attempted": [],
+            "error": "Model load skipped on Windows (set WILDTRACK_SKIP_MODEL_LOAD=0 to force).",
+        }
+        print("[WARN] Skipping model load on Windows. Set WILDTRACK_SKIP_MODEL_LOAD=0 to force load.")
+        return
+
+    try:
+        import tensorflow as tf
+    except Exception as e:
+        model = None
+        model_load_diagnostics = {
+            "loaded_from": None,
+            "attempted": [],
+            "error": f"TensorFlow unavailable: {type(e).__name__}: {e}",
+        }
+        print(f"[ERROR] TensorFlow unavailable. Model loading skipped: {type(e).__name__}: {e}")
+        return
     from tensorflow import keras
     from tensorflow.keras import layers
 
