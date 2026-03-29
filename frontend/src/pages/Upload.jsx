@@ -768,8 +768,19 @@ export default function UploadPage() {
                           </motion.div>
 
                           {/* Species info */}
-                          <div className="flex-1 min-w-0">
-                            {result.is_unknown ? (
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            {result.is_not_footprint ? (
+                              <div className="mt-1">
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
+                                  className="text-[14px] uppercase tracking-widest text-red-500 font-black flex items-center gap-2">
+                                  <FiAlertTriangle size={14} /> foot print error !
+                                </motion.div>
+                                <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }}
+                                  className="text-2xl font-black text-red-600 dark:text-red-400 mt-1 uppercase tracking-tight">
+                                  unable to find foot prints
+                                </motion.div>
+                              </div>
+                            ) : result.is_unknown ? (
                               <>
                                 <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}
                                   className="text-xs uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1.5">
@@ -846,7 +857,7 @@ export default function UploadPage() {
                           </div>
                         </div>
 
-                        {result.is_unknown && (
+                        {result.is_unknown && !result.is_not_footprint && (
                           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
                             className="mt-4 p-3 rounded-xl text-xs bg-amber-500/10 text-amber-500">
                             Confidence below 40% threshold. This footprint may belong to a species not in our database (deer, elephant, leopard, tiger, wolf) or the image may not be a clear footprint.
@@ -854,6 +865,7 @@ export default function UploadPage() {
                         )}
 
                         {/* Confidence bar */}
+                        {!result.is_not_footprint && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
                           className="mt-4">
                           <div className="flex justify-between text-sm mb-1.5">
@@ -881,9 +893,10 @@ export default function UploadPage() {
                                 result.confidence >= 0.4 ? '⚠ Moderate Confidence' : '? Low Confidence'}
                           </motion.div>
                         </motion.div>
+                        )}
 
                         {/* Entropy info */}
-                        {result.entropy !== undefined && (
+                        {result.entropy !== undefined && !result.is_not_footprint && (
                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
                             className={`mt-3 pt-3 border-t text-xs space-y-1.5 b-subtle`}>
                             <div className="flex justify-between">
@@ -918,7 +931,7 @@ export default function UploadPage() {
                       </div>
 
                       {/* ── AI CONSENSUS VALIDATION PANEL ── */}
-                      {result.consensus && (
+                      {result.consensus && !result.is_not_footprint && (
                         <motion.div
                           initial={{ opacity: 0, y: 12 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -1047,7 +1060,7 @@ export default function UploadPage() {
                       )}
 
                       {/* Top predictions — cinematic stagger reveal */}
-                      {result.top3 && (
+                      {result.top3 && result.top3.length > 0 && !result.is_not_footprint && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>
                           <h3 className="text-xs font-semibold mb-3 uppercase tracking-wider flex items-center gap-2 t-tertiary">
                             <FiActivity size={12} /> Probability Distribution
@@ -1087,22 +1100,40 @@ export default function UploadPage() {
                       )}
 
                       {/* Actionable Insight */}
-                      <ResultInsight result={result} />
+                      {!result.is_not_footprint && <ResultInsight result={result} />}
 
                       {/* Download PDF Report */}
-                      <motion.button whileHover={{ scale: 1.02, y: -2, boxShadow: '0 8px 30px rgba(249,115,22,0.3)' }} whileTap={{ scale: 0.98 }}
-                        onClick={async () => {
-                          try {
-                            const res = await api.generateReport(file || new File([await (await fetch(preview)).blob()], 'footprint.jpg'));
-                            const url = URL.createObjectURL(res.data);
-                            const a = document.createElement('a');
-                            a.href = url; a.download = `wildtrack_report.pdf`; a.click();
-                            URL.revokeObjectURL(url);
-                          } catch (e) { /* report generation failed */ }
-                        }}
-                        className="w-full py-3.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all">
-                        <FiDownload size={16} /> Download PDF Report
-                      </motion.button>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <motion.button whileHover={{ scale: 1.02, y: -2, boxShadow: '0 8px 30px rgba(249,115,22,0.3)' }} whileTap={{ scale: 0.98 }}
+                          onClick={async () => {
+                            try {
+                              const res = await api.generateReport(file || new File([await (await fetch(preview)).blob()], 'footprint.jpg'));
+                              const url = URL.createObjectURL(res.data);
+                              const a = document.createElement('a');
+                              a.href = url; a.download = `wildtrack_report.pdf`; a.click();
+                              URL.revokeObjectURL(url);
+                            } catch (e) { 
+                              alert("Report generation failed: " + (e.message || "Unknown error"));
+                            }
+                          }}
+                          className="flex-1 py-3.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all">
+                          <FiDownload size={16} /> Download PDF
+                        </motion.button>
+                        
+                        <motion.button whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            try {
+                              const imgData = (showHeatmap && result?.heatmap) ? `data:image/png;base64,${result.heatmap}` : preview;
+                              const a = document.createElement('a');
+                              a.href = imgData; a.download = `wildtrack_image.png`; a.click();
+                            } catch (e) {
+                              alert("Image download failed!");
+                            }
+                          }}
+                          className="flex-1 py-3.5 rounded-xl text-sm font-semibold border border-orange-500/30 text-orange-500 bg-orange-500/5 hover:bg-orange-500/10 flex items-center justify-center gap-2 transition-all">
+                          <FiImage size={16} /> Download Image
+                        </motion.button>
+                      </div>
 
                       <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                         onClick={reset} className="w-full py-3 rounded-xl text-sm font-medium border transition b-primary surface-hover">

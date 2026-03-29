@@ -50,3 +50,8 @@ bfg-*.jar
 
 # Generated PDFs
 *.pdf
+
+.env.local
+.pytest_cache/
+build/
+.vscode/

@@ -817,6 +817,23 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
     """
     if quality_metrics is None:
         quality_metrics = {}
+        
+    # --- OOD Detection for Non-Footprint Images ---
+    if original_image is not None:
+        try:
+            gray = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY) if len(original_image.shape) == 3 else original_image
+            if (np.sum(gray > 240) / gray.size) > 0.55 or (np.sum(gray < 15) / gray.size) > 0.60:
+                return {
+                    "predicted_class": "error", "raw_class": "error", "is_unknown": True,
+                    "is_not_footprint": True, "error_message": "foot print error ! and unable to find foot prints",
+                    "confidence": 0.0, "quality_adjusted_confidence": 0.0, "margin": 0.0,
+                    "entropy": 0.0, "entropy_ratio": 1.0, "max_entropy": 0.0, "temperature": 1.0,
+                    "top3": [], "all_predictions": [], "heatmap": None, "animal_info": {},
+                    "needs_review": False, "requires_field_validation": False
+                }
+        except Exception as e:
+            print(f"OOD detect error: {e}")
+
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded. Train model first.")
 
@@ -1213,7 +1230,15 @@ async def predict(
     pred_id = str(uuid.uuid4())[:8]
     
     # Save to Cloudinary (optional; safely skipped when not configured)
-    image_url = upload_to_cloudinary(contents, pred_id)
+    try:
+        import asyncio
+        image_url = await asyncio.wait_for(
+            asyncio.to_thread(upload_to_cloudinary, contents, pred_id),
+            timeout=5.0
+        )
+    except Exception as e:
+        print(f"  [WARN] Cloudinary async timeout/error: {e}")
+        image_url = ""
 
     # Store in database
     db = SessionLocal()
@@ -1244,6 +1269,8 @@ async def predict(
         "confidence": result["confidence"],
         "quality_adjusted_confidence": result.get("quality_adjusted_confidence", result["confidence"]),
         "is_unknown": result["is_unknown"],
+        "is_not_footprint": result.get("is_not_footprint", False),
+        "error_message": result.get("error_message", ""),
         "needs_review": bool(needs_review),
         "stage1_yolo": stage1_meta,
         "raw_class": result.get("raw_class", result["predicted_class"]),
@@ -1286,7 +1313,15 @@ async def predict_batch(files: List[UploadFile] = File(...),
             requires_field_validation = blur_level < 45
 
             # Save to Cloudinary (optional; safely skipped when not configured)
-            image_url = upload_to_cloudinary(contents, pred_id)
+            try:
+                import asyncio
+                image_url = await asyncio.wait_for(
+                    asyncio.to_thread(upload_to_cloudinary, contents, pred_id),
+                    timeout=5.0
+                )
+            except Exception as e:
+                print(f"  [WARN] Cloudinary async timeout/error: {e}")
+                image_url = ""
 
             # Store in DB
             db = SessionLocal()
@@ -2332,8 +2367,8 @@ def _generate_knowledge_response(message: str) -> str:
                 lines.append(_get_species_characteristics(species_name))
             if info.get('conservation_status'):
                 status = info['conservation_status']
-                emoji = ' ' if 'Endangered' in status else ' ' if 'Vulnerable' in status else ' '
-                lines.append(f"\n{emoji} **Conservation status:** {status}")
+                emoji_label = '[ENDANGERED]' if 'Endangered' in status else '[VULNERABLE]' if 'Vulnerable' in status else '[OK]'
+                lines.append(f"\n{emoji_label} **Conservation status:** {status}")
             if info.get('weight'):
                 lines.append(f"   **Weight:** {info['weight']}")
             if info.get('distribution'):
@@ -2348,7 +2383,7 @@ def _generate_knowledge_response(message: str) -> str:
     if any(w in msg_lower for w in ['help', 'what can you', 'how to', 'how do', 'features', 'capabilities']):
         return ("###   WildTrackAI Guide\n\n"
                 "**Image Analysis:**\n"
-                "1. Upload a footprint image using the   button\n"
+                "1. Upload a footprint image using the upload button\n"
                 "2. Get structured analysis with confidence scores\n"
                 "3. View Grad-CAM heatmaps showing model focus areas\n\n"
                 "**Conversational Features:**\n"

@@ -31,7 +31,7 @@ SECRET_KEY = os.getenv("JWT_SECRET", _JWT_FALLBACK)
 if SECRET_KEY == _JWT_FALLBACK:
     import warnings
     warnings.warn(
-        "⚠️  JWT_SECRET not set — using insecure fallback. "
+        "[WARNING] JWT_SECRET not set - using insecure fallback. "
         "Set JWT_SECRET environment variable in production!",
         stacklevel=2,
     )
