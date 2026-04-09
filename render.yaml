@@ -5,26 +5,44 @@ services:
   - type: web
     name: wildtrack-backend
     env: python
-    region: oregon 
+    region: oregon
+    pythonVersion: 3.10
+    healthCheckPath: /health
     buildCommand: |
+      set -e
+      echo "[BUILD] Starting WildTrack backend build..."
       cd backend
+      echo "[BUILD] Installing dependencies..."
+      pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
+      echo "[BUILD] Creating required directories..."
+      mkdir -p models uploads outputs logs
+      echo "[BUILD] Backend build completed successfully"
     startCommand: |
       cd backend
-      uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+      echo "[START] WildTrack backend starting..."
+      python -c "from database import init_db; init_db(); print('[OK] Database initialized')"
+      echo "[START] Starting Uvicorn server..."
+      uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 65
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: WILDTRACK_SKIP_MODEL_LOAD
+        value: "0"
       - key: CORS_ORIGINS
-        value: https://wildtrack-frontend-iuww.onrender.com,https://wildtrack-frontend.onrender.com
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: GEMINI_API_KEY
-        sync: false # Set via dashboard
+        sync: false
       - key: NINJA_API_KEY
-        sync: false # Set via dashboard
+        sync: false
       - key: CLOUDINARY_URL
-        sync: false # Set via dashboard
+        sync: false
 
   # -------------------------------------------------------------
   # Frontend: React / Vite Static Site
@@ -34,13 +52,20 @@ services:
     env: static
     region: oregon
     buildCommand: |
+      set -e
+      echo "[BUILD] Starting WildTrack frontend build..."
       cd frontend
+      echo "[BUILD] Installing dependencies..."
       npm install
+      echo "[BUILD] Building production bundle..."
       npm run build
+      echo "[BUILD] Frontend build completed successfully"
     staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://wildtrack-backend-j9n8.onrender.com
+        sync: false
+      - key: NODE_ENV
+        value: production
     routes:
       # React SPA routing rule
       - type: rewrite

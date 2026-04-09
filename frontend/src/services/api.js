@@ -3,12 +3,16 @@
  */
 import axios from 'axios';
 
-// Smart fallback for unconfigured deployments to prevent mixed-content Network Errors
-const fallbackUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:8000'
-  : 'https://wildtrack-backend-j9n8.onrender.com';
+// Safe fallback for unconfigured deployments.
+// Local dev defaults to local backend, production uses same-origin unless VITE_API_URL is set.
+const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const fallbackUrl = isLocalHost ? 'http://127.0.0.1:8000' : window.location.origin;
 
 export const API_BASE = import.meta.env.VITE_API_URL || fallbackUrl;
+
+if (!import.meta.env.VITE_API_URL && !isLocalHost) {
+  console.warn('[API] VITE_API_URL is not set; using same-origin fallback. Configure VITE_API_URL in deployment settings.');
+}
 
 const DEFAULT_TIMEOUT_MS = 120000;
 const PREDICT_TIMEOUT_MS = 300000;

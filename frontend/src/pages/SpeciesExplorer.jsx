@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiMapPin, FiInfo, FiChevronRight, FiMaximize, FiCheck, FiX, FiFilter, FiZap, FiGlobe, FiAlertTriangle, FiBookOpen, FiTarget, FiStar, FiFeather, FiCompass, FiShield, FiLayers, FiActivity } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiInfo, FiChevronRight, FiMaximize, FiCheck, FiFilter, FiGlobe, FiAlertTriangle, FiBookOpen, FiTarget, FiFeather, FiCompass, FiShield, FiLayers, FiActivity } from 'react-icons/fi';
 import { GiPawPrint } from 'react-icons/gi';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
@@ -295,7 +295,6 @@ export default function SpeciesExplorerPage() {
   const [trainedSpecies, setTrainedSpecies] = useState([]);
   const [localDetails, setLocalDetails] = useState({});
   const [selected, setSelected] = useState(new Set());
-  const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [compareMode, setCompareMode] = useState(false);
 
@@ -352,11 +351,6 @@ export default function SpeciesExplorerPage() {
     if (e.key === 'Enter') { e.preventDefault(); searchAI(); }
   };
 
-  const filteredTrained = useMemo(() =>
-    trainedSpecies.filter(s => s.toLowerCase().includes(filter.toLowerCase())),
-    [trainedSpecies, filter]
-  );
-
   const toggleSelect = (name) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -364,11 +358,6 @@ export default function SpeciesExplorerPage() {
       else next.add(name);
       return next;
     });
-  };
-
-  const selectAll = () => {
-    if (selected.size === filteredTrained.length) setSelected(new Set());
-    else setSelected(new Set(filteredTrained));
   };
 
   const getDetail = (name) => {
@@ -532,61 +521,9 @@ export default function SpeciesExplorerPage() {
           </span>
         </div>
 
-        <div className={`${cardClass} p-4 mb-4`}>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Filter trained species..."
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-[var(--bg-surface-2)] border-[var(--border-primary)] focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm"
-              />
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              onClick={selectAll}
-              className="px-3 py-2.5 rounded-xl text-xs font-medium transition surface-inset t-secondary"
-            >
-              {selected.size === filteredTrained.length ? 'Deselect All' : 'Select All'}
-            </motion.button>
-            {selected.size > 0 && (
-              <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }}
-                onClick={() => setSelected(new Set())}
-                className="p-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
-              >
-                <FiX size={16} />
-              </motion.button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2 mt-3">
-            {filteredTrained.map(s => (
-              <motion.button
-                key={s}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => toggleSelect(s)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                  ${selected.has(s)
-                    ? 'bg-orange-500/15 text-orange-500 ring-1 ring-orange-500/30 shadow-sm'
-                    : 'surface-inset t-secondary'}`}
-              >
-                {selected.has(s) && <FiCheck size={12} />}
-                <span className="text-base">{SPECIES_ICONS[s] || '🐾'}</span>
-                <span className="capitalize">{s}</span>
-              </motion.button>
-            ))}
-            {filteredTrained.length === 0 && (
-              <p className="text-sm py-2 t-dim">No trained species match your filter</p>
-            )}
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-2">
-            {filteredTrained.map((s, i) => (
+            {trainedSpecies.map((s, i) => (
               <motion.button
                 key={s}
                 initial={{ opacity: 0, x: -10 }}

@@ -82,9 +82,9 @@ gemini_model = object() if is_gemini_available() else None
 # API Ninjas Configuration
 NINJA_API_KEY = os.getenv("NINJA_API_KEY", "")
 if NINJA_API_KEY:
-    print(f"  [OK] API Ninjas initialized")
+    print("[CONFIG] API Ninjas initialized")
 else:
-    print("  [WARN] No NINJA_API_KEY found -- animal search will be unavailable")
+    print("[CONFIG] WARN No NINJA_API_KEY found -- animal search will be unavailable")
 
 # Cloudinary Configuration
 CLOUDINARY_URL = os.getenv("CLOUDINARY_URL", "").strip()
@@ -95,13 +95,47 @@ _cloudinary_initialized = False
 _cloudinary_warned = False
 
 # Create directories
-for d in [UPLOADS_DIR, OUTPUTS_DIR]:
+for d in [UPLOADS_DIR, OUTPUTS_DIR, MODELS_DIR]:
     os.makedirs(d, exist_ok=True)
 
+
+def parse_cors_origins() -> List[str]:
+    """Parse comma-separated CORS origins from environment safely."""
+    raw = os.getenv("CORS_ORIGINS", "")
+    parsed = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if parsed:
+        return parsed
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 # ============================================
-# DATABASE INITIALIZATION
+# DATABASE INITIALIZATION (Safe with retry)
 # ============================================
-init_db()
+def safe_init_db():
+    """Initialize database with error recovery."""
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"[DB] Attempting database initialization (attempt {attempt}/{max_retries})...")
+            init_db()
+            print("[DB] Database initialized successfully")
+            return True
+        except Exception as e:
+            print(f"[DB] ERROR on attempt {attempt}: {type(e).__name__}: {e}")
+            if attempt < max_retries:
+                import time
+                wait_time = 2 ** attempt
+                print(f"[DB] Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+    print("[DB] CRITICAL: Database initialization failed after all retries")
+    return False
+
+# Initialize database early
+_db_initialized = safe_init_db()
 
 # ============================================
 # MODEL LOADING
@@ -176,22 +210,23 @@ def download_models_if_missing():
     from time import sleep
     
     global model_download_status
-    model_download_status["status"] = "downloading"
+    model_download_status = {"status": "downloading", "downloaded": [], "failed": []}
     
     for filename, url in MODEL_URLS.items():
         filepath = os.path.join(MODELS_DIR, filename)
         if os.path.exists(filepath):
             file_size = os.path.getsize(filepath) / (1024 * 1024)
-            print(f"  OK Model exists: {filename} ({file_size:.1f} MB)")
+            print(f"[MODEL] OK Model exists: {filename} ({file_size:.1f} MB)")
             model_download_status["downloaded"].append(filename)
             continue
             
-        # Retry logic: try up to 3 times
+        # Retry logic: try up to 3 times with exponential backoff
         max_retries = 3
         for attempt in range(1, max_retries + 1):
             try:
-                print(f"  Downloading {filename}... (attempt {attempt}/{max_retries})")
-                resp = req.get(url, stream=True, timeout=300, allow_redirects=True)
+                print(f"[MODEL] Downloading {filename}... (attempt {attempt}/{max_retries})")
+                # Increased timeout for cloud environments
+                resp = req.get(url, stream=True, timeout=600, allow_redirects=True, verify=True)
                 resp.raise_for_status()
                 
                 os.makedirs(MODELS_DIR, exist_ok=True)
@@ -205,25 +240,28 @@ def download_models_if_missing():
                             downloaded += len(chunk)
                             if total_size > 0 and downloaded % (5 * 1024 * 1024) == 0:
                                 progress = (downloaded / total_size) * 100
-                                print(f"    Progress: {progress:.0f}% ({downloaded / (1024*1024):.1f}/{total_size / (1024*1024):.1f} MB)")
+                                print(f"[MODEL]   Progress: {progress:.0f}% ({downloaded / (1024*1024):.1f}/{total_size / (1024*1024):.1f} MB)")
                 
                 size_mb = os.path.getsize(filepath) / (1024 * 1024)
-                print(f"  [OK] Downloaded {filename} ({size_mb:.1f} MB)")
+                print(f"[MODEL] OK Downloaded {filename} ({size_mb:.1f} MB)")
                 model_download_status["downloaded"].append(filename)
                 break  # Success, exit retry loop
                 
             except Exception as e:
-                print(f"  [ERROR] Attempt {attempt} failed: {e}")
+                print(f"[MODEL] ERROR Attempt {attempt} failed: {type(e).__name__}: {e}")
                 if attempt < max_retries:
-                    wait_time = 2 ** attempt  # Exponential backoff
-                    print(f"  Retrying in {wait_time}s...")
+                    wait_time = 2 ** attempt  # Exponential backoff: 2, 4, 8 seconds
+                    print(f"[MODEL] Retrying in {wait_time}s...")
                     sleep(wait_time)
                 else:
-                    print(f"  [ERROR] All download attempts failed for {filename}")
+                    print(f"[MODEL] WARN All download attempts failed for {filename}")
                     model_download_status["failed"].append(filename)
                     # Clean up partial download
                     if os.path.exists(filepath):
-                        os.remove(filepath)
+                        try:
+                            os.remove(filepath)
+                        except:
+                            pass
     
     model_download_status["status"] = "completed" if not model_download_status["failed"] else "partial"
 
@@ -231,6 +269,8 @@ def download_models_if_missing():
 def load_model():
     """Load the trained model and metadata at startup."""
     global tf, model, model_metadata, class_names, gradcam, IMG_SIZE, model_load_diagnostics
+
+    print("[MODEL] Starting model loading sequence...")
 
     # Download models if not present (cloud deployment)
     download_models_if_missing()
@@ -245,11 +285,12 @@ def load_model():
             "attempted": [],
             "error": "Model load skipped on Windows (set WILDTRACK_SKIP_MODEL_LOAD=0 to force).",
         }
-        print("[WARN] Skipping model load on Windows. Set WILDTRACK_SKIP_MODEL_LOAD=0 to force load.")
+        print("[MODEL] WARN Skipping model load on Windows. Set WILDTRACK_SKIP_MODEL_LOAD=0 to force load.")
         return
 
     try:
         import tensorflow as tf
+        print("[MODEL] TensorFlow imported successfully")
     except Exception as e:
         model = None
         model_load_diagnostics = {
@@ -257,7 +298,8 @@ def load_model():
             "attempted": [],
             "error": f"TensorFlow unavailable: {type(e).__name__}: {e}",
         }
-        print(f"[ERROR] TensorFlow unavailable. Model loading skipped: {type(e).__name__}: {e}")
+        print(f"[MODEL] ERROR TensorFlow unavailable: {type(e).__name__}: {e}")
+        print("[MODEL] WARN Model loading skipped - server will operate in demo mode")
         return
     from tensorflow import keras
     from tensorflow.keras import layers
@@ -278,17 +320,17 @@ def load_model():
     ]
 
     if not candidate_files:
-        print("WARNING: No trained model found!")
-        print(f"  Checked: {MODEL_PATH_KERAS}")
-        print(f"  Checked: {MODEL_PATH}")
-        print(f"  Checked: {MODEL_PATH_LEGACY}")
-        print(f"  Checked: {MODEL_PATH_V4}")
-        print(f"  Checked: {MODEL_PATH_V3}")
-        print("  Run training first: python training/train.py")
+        print("[MODEL] WARNING: No trained model found")
+        print(f"[MODEL]   Checked: {MODEL_PATH_KERAS}")
+        print(f"[MODEL]   Checked: {MODEL_PATH}")
+        print(f"[MODEL]   Checked: {MODEL_PATH_LEGACY}")
+        print(f"[MODEL]   Checked: {MODEL_PATH_V4}")
+        print(f"[MODEL]   Checked: {MODEL_PATH_V3}")
+        print("[MODEL]   Models will be auto-downloaded on next startup")
         model_load_diagnostics = {
             "loaded_from": None,
             "attempted": [],
-            "error": "No trained model file found",
+            "error": "No trained model file found (auto-download pending)",
         }
         return
 
@@ -338,7 +380,7 @@ def load_model():
                 "size_mb": round(file_size_mb, 2),
             }
         )
-        print(f"Loading model: {model_file} ({file_size_mb:.1f} MB)")
+        print(f"[MODEL] Loading: {os.path.basename(model_file)} ({file_size_mb:.1f} MB)")
         try:
             load_kwargs = dict(compile=False, custom_objects=custom_objects)
             # .h5 files with Lambda/custom layers need safe_mode=False
@@ -346,14 +388,15 @@ def load_model():
                 load_kwargs['safe_mode'] = False
             model = tf.keras.models.load_model(model_file, **load_kwargs)
             model_load_diagnostics["loaded_from"] = model_file
-            print(f"  Model loaded successfully ({model.count_params():,} params)")
+            print(f"[MODEL] OK Loaded successfully ({model.count_params():,} params)")
             break
         except Exception as e:
             model_load_diagnostics["error"] = f"{type(e).__name__}: {e}"
-            print(f"  ERROR loading {os.path.basename(model_file)}: {e}")
+            print(f"[MODEL] ERROR Loading {os.path.basename(model_file)}: {type(e).__name__}: {e}")
 
     if model is None:
-        print("ERROR: Failed to load model from all available files")
+        print("[MODEL] WARN Failed to load model from all available files - running in demo mode")
+        model_load_diagnostics["error"] = "All model loading attempts failed"
         return
 
     # Load metadata
@@ -368,23 +411,23 @@ def load_model():
             IMG_SIZE = (model_metadata.get('img_size') or
                         model_metadata.get('image_size') or 
                         model_metadata.get('input_size') or IMG_SIZE)
-        print(f"  Classes: {class_names}")
-        print(f"  Image size: {IMG_SIZE}")
-        print(f"  Accuracy: {model_metadata.get('accuracy', 'N/A')}")
-        print(f"  Backbone: {model_metadata.get('backbone', 'N/A')}")
-        print(f"  Version: {model_metadata.get('version', 'N/A')}")
+        print(f"[MODEL]   Classes: {class_names}")
+        print(f"[MODEL]   Image size: {IMG_SIZE}")
+        print(f"[MODEL]   Accuracy: {model_metadata.get('accuracy', 'N/A')}")
+        print(f"[MODEL]   Backbone: {model_metadata.get('backbone', 'N/A')}")
+        print(f"[MODEL]   Version: {model_metadata.get('version', 'N/A')}")
     else:
         # Fallback class names (must match model output order)
         class_names = ['deer', 'elephant', 'leopard', 'tiger', 'wolf']
-        print(f"  Using default classes: {class_names}")
+        print(f"[MODEL]   Using default classes: {class_names}")
 
     # Initialize GradCAM
     try:
         from gradcam_module import GradCAM
         gradcam = GradCAM(model, output_dir=OUTPUTS_DIR)
-        print("  GradCAM: initialized")
+        print("[MODEL] GradCAM initialized")
     except Exception as e:
-        print(f"  GradCAM: failed to initialize ({e})")
+        print(f"[MODEL] WARN GradCAM initialization failed: {type(e).__name__}: {e}")
         gradcam = None
 
 
@@ -506,7 +549,12 @@ async def lifespan(app: FastAPI):
     """Load model on startup."""
     global _startup_time
     _startup_time = datetime.datetime.utcnow()
-    load_model()
+    try:
+        if not _db_initialized:
+            print("[STARTUP] WARN Database was not initialized successfully before app startup")
+        load_model()
+    except Exception as exc:
+        print(f"[STARTUP] ERROR Unexpected startup failure: {type(exc).__name__}: {exc}")
     yield
     print("Shutting down...")
 
@@ -523,7 +571,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=parse_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -845,15 +893,31 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
     if original_image is not None:
         try:
             gray = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY) if len(original_image.shape) == 3 else original_image
+            
+            # Fast check 1: Document/Diagram check (mostly white or black)
             if (np.sum(gray > 240) / gray.size) > 0.55 or (np.sum(gray < 15) / gray.size) > 0.60:
                 return {
                     "predicted_class": "error", "raw_class": "error", "is_unknown": True,
-                    "is_not_footprint": True, "error_message": "foot print error ! and unable to find foot prints",
+                    "is_not_footprint": True, "error_message": "error foot print not found",
                     "confidence": 0.0, "quality_adjusted_confidence": 0.0, "margin": 0.0,
                     "entropy": 0.0, "entropy_ratio": 1.0, "max_entropy": 0.0, "temperature": 1.0,
-                    "top3": [], "all_predictions": [], "heatmap": None, "animal_info": {},
+                    "top3": [], "all_predictions": {}, "heatmap": None, "animal_info": {},
                     "needs_review": False, "requires_field_validation": False
                 }
+                
+            # Fast check 2: Face Detection to catch selfies/human photos
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            if face_cascade is not None and not face_cascade.empty():
+                faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(50, 50))
+                if len(faces) > 0:
+                    return {
+                        "predicted_class": "error", "raw_class": "error", "is_unknown": True,
+                        "is_not_footprint": True, "error_message": "error foot print not found",
+                        "confidence": 0.0, "quality_adjusted_confidence": 0.0, "margin": 0.0,
+                        "entropy": 0.0, "entropy_ratio": 1.0, "max_entropy": 0.0, "temperature": 1.0,
+                        "top3": [], "all_predictions": {}, "heatmap": None, "animal_info": {},
+                        "needs_review": False, "requires_field_validation": False
+                    }
         except Exception as e:
             print(f"OOD detect error: {e}")
 
@@ -1009,6 +1073,17 @@ def predict_single(img_array, original_image=None, generate_heatmap=True, use_tt
         print(f"Consensus validation error: {e}")
         consensus_result = None
 
+    # Structured error payload for unknown footprints
+    if is_unknown or predicted_class == "unknown":
+        return {
+            "predicted_class": "error", "raw_class": "error", "is_unknown": True,
+            "is_not_footprint": True, "error_message": "error foot print not found",
+            "confidence": 0.0, "quality_adjusted_confidence": 0.0, "margin": 0.0,
+            "entropy": 0.0, "entropy_ratio": 1.0, "max_entropy": 0.0, "temperature": 1.0,
+            "top3": [], "all_predictions": {}, "heatmap": None, "animal_info": {},
+            "needs_review": False, "requires_field_validation": False
+        }
+
     return {
         "predicted_class": predicted_class,
         "raw_class": raw_class,
@@ -1060,7 +1135,11 @@ async def health_check(request: Request):
     if request.method == "HEAD":
         return Response(status_code=200)
     # Determine overall health status
-    is_healthy = model is not None and model_download_status.get("status") != "partial"
+    is_healthy = (
+        _db_initialized
+        and model is not None
+        and model_download_status.get("status") in {"completed", "pending"}
+    )
     
     return {
         "status": "healthy" if is_healthy else "degraded",
@@ -1070,7 +1149,7 @@ async def health_check(request: Request):
         "gradcam_available": gradcam is not None,
         "classes": len(class_names),
         "class_names": class_names if len(class_names) <= 10 else class_names[:10],
-        "database": os.path.exists(DB_PATH),
+        "database": _db_initialized,
         "gemini_ai": is_gemini_available(),
         "ninja_api": bool(NINJA_API_KEY),
         "timestamp": datetime.datetime.utcnow().isoformat(),
@@ -1080,6 +1159,8 @@ async def health_check(request: Request):
 @app.get("/ready")
 async def readiness_check():
     """Readiness probe for Render - only returns 200 when model is loaded."""
+    if not _db_initialized:
+        raise HTTPException(status_code=503, detail="Service not ready - database unavailable")
     if model is None:
         raise HTTPException(status_code=503, detail="Service not ready - model still loading")
     return {"ready": True, "status": "operational"}
@@ -1150,7 +1231,7 @@ async def predict(
     #    DYNAMIC CROP EVALUATION FOR AMBIGUOUS SNOW TRACKS   
     # If the track is ambiguous (low confidence) and YOLO was used, 
     # run a second pass without the 15% padding because snow noise can confuse felines and canines.
-    if stage1_meta.get("yolo_used") and result.get("confidence", 0) < 0.60 and result.get("predicted_class") in ["leopard", "wolf", "tiger", "dog", "fox", "cat", "unknown"]:
+    if stage1_meta.get("yolo_used") and not result.get("is_not_footprint", False) and result.get("confidence", 0) < 0.60 and result.get("predicted_class") in ["leopard", "wolf", "tiger", "dog", "fox", "cat", "unknown", "error"]:
         try:
             print("  [DIAG] Ambiguous track detected. Running fallback evaluation without expansion margin...")
             img_array_fb, original_fb, quality_metrics_fb, stage1_meta_fb = preprocess_image(contents, expansion_margin=0.0)
