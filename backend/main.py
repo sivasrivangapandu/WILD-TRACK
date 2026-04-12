@@ -43,6 +43,7 @@ from pydantic import BaseModel
 import uvicorn
 import asyncio
 import logging
+import requests
 
 # ── Suppress noisy health-check access logs ──────────────────────
 class _HealthLogFilter(logging.Filter):
@@ -181,7 +182,7 @@ def upload_to_cloudinary(contents: bytes, pred_id: str) -> str:
 
 def download_models_if_missing():
     """Download model files from GitHub Release if not present locally."""
-    import requests as req
+    # Clean up redundant imports inside functions
     from time import sleep
     
     global model_download_status
@@ -200,7 +201,7 @@ def download_models_if_missing():
         for attempt in range(1, max_retries + 1):
             try:
                 print(f"  Downloading {filename}... (attempt {attempt}/{max_retries})")
-                resp = req.get(url, stream=True, timeout=300, allow_redirects=True)
+                resp = requests.get(url, stream=True, timeout=300, allow_redirects=True)
                 resp.raise_for_status()
                 
                 os.makedirs(MODELS_DIR, exist_ok=True)
@@ -514,7 +515,6 @@ _model_ready = False
 
 async def _keep_alive_loop():
     """Self-ping every 10 min to prevent Render free-tier spin-down."""
-    import requests as _req
     external_url = os.getenv("RENDER_EXTERNAL_URL", "")
     if not external_url:
         return  # Not deployed on Render; no need for keep-alive
@@ -523,7 +523,7 @@ async def _keep_alive_loop():
     while True:
         await asyncio.sleep(600)  # Every 10 minutes
         try:
-            await asyncio.to_thread(lambda: _req.get(health_url, timeout=10))
+            await asyncio.to_thread(lambda: requests.get(health_url, timeout=10))
             print("[KEEP-ALIVE] Ping OK")
         except Exception as e:
             print(f"[KEEP-ALIVE] Ping failed: {e}")
@@ -1297,7 +1297,6 @@ async def predict(
     
     # Save to Cloudinary (optional; safely skipped when not configured)
     try:
-        import asyncio
         image_url = await asyncio.wait_for(
             asyncio.to_thread(upload_to_cloudinary, contents, pred_id),
             timeout=5.0
@@ -1385,7 +1384,6 @@ async def predict_batch(files: List[UploadFile] = File(...),
 
             # Save to Cloudinary (optional; safely skipped when not configured)
             try:
-                import asyncio
                 image_url = await asyncio.wait_for(
                     asyncio.to_thread(upload_to_cloudinary, contents, pred_id),
                     timeout=5.0
@@ -1609,8 +1607,6 @@ If the query is not a real animal or you can't identify it, respond with:
 # ============================================
 # API NINJAS -- ANIMAL INFO ENDPOINT
 # ============================================
-
-import requests
 
 @app.get("/api/animal-info")
 async def get_animal_info(name: str = Query(..., min_length=1)):
