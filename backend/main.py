@@ -60,33 +60,44 @@ from services.gemini_provider import is_gemini_available, generate_gemini_text, 
 
 async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
     """Gatekeeper: Check if image contains a footprint using Gemini.
-    
+
     Returns:
         - (True, "") if it's a footprint
         - (False, "Reason") if it's not
     """
     if not is_gemini_available():
-        return True, "" # Fail-safe: proceed if AI key is missing
+        return True, ""  # Fail-safe: proceed if Gemini unavailable
 
     prompt = (
-        "Analyze this image. Does it contain an animal footprint or track in soil, mud, or sand? "
-        "Respond ONLY with 'YES' if it is a footprint, or 'NO' if it is anything else (people, faces, "
-        "landscapes, architecture, urban scenes, or random objects). "
-        "If unsure but it looks like a track, respond 'YES'."
+        "Strictly analyze this image. Does it contain an animal footprint or paw print "
+        "(a track in soil, mud, sand, or similar substrate showing the impression of an animal's foot)? "
+        "Respond ONLY with 'YES' for footprints or 'NO' for anything else. "
+        "Examples of NO: people, faces, animals themselves, landscapes, buildings, vehicles, art, drawings. "
+        "Examples of YES: pawprints, hoofprints, tracks in mud/dirt/snow."
     )
-    
+
     try:
-        # Use base64 encoded bytes for the new multimodal function
         import base64
         b64_data = base64.b64encode(image_bytes).decode('utf-8')
         result = await asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data)
-        
-        if result and "NO" in result:
-            return False, "This image does not appear to contain an animal footprint. Please upload a clear track photo."
+
+        if result is None:
+            print(f"  [DIAG] Gatekeeper: Gemini returned None")
+            return True, ""  # Fail-safe if Gemini fails
+
+        # Check response - reject if clearly "NO"
+        if result.startswith("NO"):
+            reason = "This image does not appear to contain an animal footprint. Please upload a clear track photo (footprint/paw print in soil/mud/sand)."
+            print(f"  [DIAG] Gatekeeper: Image rejected. Gemini response: {result}")
+            return False, reason
+
+        # Default: allow (anything other than NO, including "YES" or unclear responses)
+        print(f"  [DIAG] Gatekeeper: Image accepted. Gemini response: {result}")
         return True, ""
+
     except Exception as e:
         print(f"  [WARN] Gatekeeper check failed: {e}")
-        return True, "" # Fail-safe
+        return True, ""  # Fail-safe
 
 # Chat streaming and database routes
 from routes import chat_router, chat_db_router, auth_router

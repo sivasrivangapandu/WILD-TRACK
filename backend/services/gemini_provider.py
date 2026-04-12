@@ -71,11 +71,16 @@ def generate_gemini_text(
 
 def generate_gemini_multimodal(
     prompt: str,
-    image_bytes: bytes,
+    image_b64: str,
     mime_type: str = "image/jpeg",
 ) -> Optional[str]:
     """Analyze an image using Gemini (Multimodal).
-    
+
+    Args:
+        prompt: Text prompt for analysis
+        image_b64: Base64-encoded image string
+        mime_type: MIME type of the image
+
     Useful for OOD detection (e.g., 'Is this a footprint?').
     """
     if _client is None:
@@ -85,8 +90,15 @@ def generate_gemini_multimodal(
         response = _client.models.generate_content(
             model=GEMINI_MODEL_NAME,
             contents=[
-                {"inline_data": {"data": image_bytes, "mime_type": mime_type}},
-                prompt
+                {
+                    "inline_data": {
+                        "data": image_b64,
+                        "mime_type": mime_type
+                    }
+                },
+                {
+                    "text": prompt
+                }
             ],
             config={
                 "temperature": 0.1,
