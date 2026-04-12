@@ -5,7 +5,7 @@ services:
   - type: web
     name: wildtrack-backend
     env: python
-    region: oregon 
+    region: oregon
     buildCommand: |
       cd backend
       pip install -r requirements.txt
@@ -29,15 +29,14 @@ services:
   # -------------------------------------------------------------
   # Frontend: React / Vite Static Site
   # -------------------------------------------------------------
-  - type: web
+  - type: static_site
     name: wildtrack-frontend
-    env: static
     region: oregon
     buildCommand: |
       cd frontend
       npm install
       npm run build
-    staticPublishPath: frontend/dist
+    publishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://wildtrack-backend-j9n8.onrender.com
