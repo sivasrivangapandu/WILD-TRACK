@@ -1,5 +1,10 @@
 /**
  * WildTrackAI - API Service Layer
+ * ================================
+ * Centralized HTTP client with:
+ *  - Automatic retry + exponential back-off
+ *  - Cold-start warm-up (Render free-tier)
+ *  - Normalized error objects
  */
 import axios from 'axios';
 
@@ -10,13 +15,15 @@ const fallbackUrl = window.location.hostname === 'localhost' || window.location.
 
 export const API_BASE = import.meta.env.VITE_API_URL || fallbackUrl;
 
-const DEFAULT_TIMEOUT_MS = 120000;
-const PREDICT_TIMEOUT_MS = 300000;
-const PREDICT_RETRY_COUNT = 1;
-const PREDICT_RETRY_DELAY_MS = 1500;
-const AUTH_TIMEOUT_MS = 45000;
-const AUTH_RETRY_COUNT = 1;
-const AUTH_RETRY_DELAY_MS = 1200;
+// ── Timeout & Retry Configuration ─────────────────────────────────
+const DEFAULT_TIMEOUT_MS = 120_000;     // 2 min for general requests
+const PREDICT_TIMEOUT_MS = 300_000;     // 5 min for predict (TF on CPU is slow)
+const PREDICT_RETRY_COUNT = 3;          // 3 retries = 4 total attempts
+const PREDICT_RETRY_DELAY_MS = 2_500;
+const AUTH_TIMEOUT_MS = 60_000;
+const AUTH_RETRY_COUNT = 2;
+const AUTH_RETRY_DELAY_MS = 2_000;
+const GET_RETRY_COUNT = 2;
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -25,33 +32,54 @@ const api = axios.create({
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const isRetryablePredictError = (err) => {
+// ── Retry Eligibility ─────────────────────────────────────────────
+const isRetryableError = (err) => {
   if (!err) return false;
   if (err.isTimeout) return true;
   if (err.code === 'ECONNABORTED') return true;
-  if (err.status === 503 || err.status === 504) return true;
+  const status = err.status || err.response?.status;
+  if ([0, 502, 503, 504].includes(status)) return true;
+  if (status === 429) return true;
   const msg = String(err.message || '').toLowerCase();
-  return msg.includes('timeout') || msg.includes('network error');
+  return msg.includes('timeout') || msg.includes('network error') || msg.includes('failed to fetch');
 };
 
-const isRetryableAuthError = (err) => {
-  if (!err) return false;
-  if (err.isTimeout) return true;
-  if (err.code === 'ECONNABORTED') return true;
-  if (err.status === 502 || err.status === 503 || err.status === 504) return true;
-  if (err.status === 429) return true;
-  const msg = String(err.message || '').toLowerCase();
-  return msg.includes('network error') || msg.includes('timeout') || msg.includes('failed to fetch');
-};
-
+// ── Warm-up Helpers ───────────────────────────────────────────────
 const warmupBackend = async () => {
   try {
-    await api.get('/health', { timeout: 15000 });
+    await api.get('/health', { timeout: 15_000 });
   } catch {
     // Best-effort warmup only.
   }
 };
 
+/**
+ * Wait until backend model is loaded (handles Render cold-start).
+ * Returns true when ready or after maxWait (let server send a proper 503).
+ */
+let _backendReady = false;
+const ensureBackendReady = async (maxWaitMs = 90_000) => {
+  if (_backendReady) return true;
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const res = await api.get('/health', { timeout: 15_000 });
+      if (res.data?.model_loaded) {
+        _backendReady = true;
+        console.log('[WildTrack] Backend model ready');
+        return true;
+      }
+      console.log('[WildTrack] Model still loading, waiting...');
+    } catch {
+      console.log('[WildTrack] Backend not reachable yet, waiting...');
+    }
+    await sleep(4_000);
+  }
+  // Proceed anyway; predict endpoint will return a proper 503
+  return true;
+};
+
+// ── Generic Retry Wrappers ────────────────────────────────────────
 const postWithRetry = async (url, body, options = {}) => {
   const timeoutMs = options.timeoutMs || AUTH_TIMEOUT_MS;
   const maxRetries = Number.isInteger(options.retries) ? options.retries : AUTH_RETRY_COUNT;
@@ -62,12 +90,31 @@ const postWithRetry = async (url, body, options = {}) => {
     try {
       return await api.post(url, body, { timeout: timeoutMs });
     } catch (err) {
-      if (attempt >= maxRetries || !isRetryableAuthError(err)) {
+      if (attempt >= maxRetries || !isRetryableError(err)) {
         throw err;
       }
       attempt += 1;
+      console.warn(`[WildTrack] POST ${url} attempt ${attempt}/${maxRetries} failed, retrying...`);
       await warmupBackend();
-      await sleep(retryDelayMs);
+      await sleep(retryDelayMs * Math.pow(1.5, attempt));
+    }
+  }
+};
+
+const getWithRetry = async (url, config = {}, maxRetries = GET_RETRY_COUNT) => {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await api.get(url, { timeout: DEFAULT_TIMEOUT_MS, ...config });
+    } catch (err) {
+      const status = err.status || err.response?.status;
+      // Don't retry client errors (4xx) except rate limiting (429)
+      if (attempt >= maxRetries || (status && status >= 400 && status < 500 && status !== 429)) {
+        throw err;
+      }
+      attempt += 1;
+      console.warn(`[WildTrack] GET ${url} attempt ${attempt}/${maxRetries} failed, retrying...`);
+      await sleep(2_000 * attempt);
     }
   }
 };
@@ -117,7 +164,7 @@ const apiService = {
     postWithRetry('/api/auth/login', { email, password }),
 
   getMe: () =>
-    api.get('/api/auth/me', { params: _tokenParam() }),
+    getWithRetry('/api/auth/me', { params: _tokenParam() }),
 
   updateProfile: (data) =>
     api.put('/api/auth/profile', data, { params: _tokenParam() }),
@@ -146,6 +193,9 @@ const apiService = {
     const maxRetries = Number.isInteger(options.retries) ? options.retries : PREDICT_RETRY_COUNT;
     const retryDelayMs = Number.isInteger(options.retryDelayMs) ? options.retryDelayMs : PREDICT_RETRY_DELAY_MS;
 
+    // Ensure backend model is loaded (cold-start protection)
+    await ensureBackendReady();
+
     const formData = new FormData();
     formData.append('file', file);
     if (location) {
@@ -161,11 +211,15 @@ const apiService = {
           timeout: timeoutMs,
         });
       } catch (err) {
-        if (attempt >= maxRetries || !isRetryablePredictError(err)) {
+        if (attempt >= maxRetries || !isRetryableError(err)) {
           throw err;
         }
         attempt += 1;
-        await sleep(retryDelayMs);
+        console.warn(`[WildTrack] Predict attempt ${attempt}/${maxRetries} failed, retrying...`);
+        // Invalidate readiness cache so warmup re-checks model
+        _backendReady = false;
+        await ensureBackendReady(30_000);
+        await sleep(retryDelayMs * Math.pow(1.5, attempt));
       }
     }
   },
@@ -175,25 +229,26 @@ const apiService = {
     files.forEach((file) => formData.append('files', file));
     return api.post('/predict/batch', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: PREDICT_TIMEOUT_MS,
     });
   },
 
-  getSpecies: () => api.get('/species'),
-  getSpeciesDetail: (name) => api.get(`/species/${name}`),
+  getSpecies: () => getWithRetry('/species'),
+  getSpeciesDetail: (name) => getWithRetry(`/species/${name}`),
 
   // Gemini-powered species search
-  searchSpecies: (query) => api.post('/species-search', { query }),
+  searchSpecies: (query) => postWithRetry('/species-search', { query }),
 
   getHistory: (limit = 50, offset = 0, species = null) => {
     const params = { limit, offset };
     if (species) params.species = species;
-    return api.get('/history', { params });
+    return getWithRetry('/history', { params });
   },
 
-  getAnalytics: () => api.get('/analytics'),
-  getModelMetrics: () => api.get('/model-metrics'),
+  getAnalytics: () => getWithRetry('/analytics'),
+  getModelMetrics: () => getWithRetry('/model-metrics'),
 
-  getSystemStatus: () => api.get('/api/system/status'),
+  getSystemStatus: () => getWithRetry('/api/system/status'),
 
   // Legacy chat endpoint
   chat: (message, file = null, sessionId = 'default') => {
@@ -216,8 +271,8 @@ const apiService = {
 
   saveStreamedChat: (payload) => api.post('/api/chat/save', payload),
   createChatSession: (payload) => api.post('/api/chat/sessions', payload),
-  listChatSessions: (userId) => api.get('/api/chat/sessions', { params: { user_id: String(userId) } }),
-  getChatSession: (sessionId) => api.get(`/api/chat/sessions/${sessionId}`),
+  listChatSessions: (userId) => getWithRetry('/api/chat/sessions', { params: { user_id: String(userId) } }),
+  getChatSession: (sessionId) => getWithRetry(`/api/chat/sessions/${sessionId}`),
   deleteChatSession: (sessionId) => api.delete(`/api/chat/sessions/${sessionId}`),
 
   generateReport(file) {
@@ -231,19 +286,19 @@ const apiService = {
 
   // Wildlife knowledge base
   getAnimalInfo: (name) =>
-    api.get('/api/animal-info', { params: { name } }),
+    getWithRetry('/api/animal-info', { params: { name } }),
 
   // ── MLOps & Active Learning ─────────────────────────────────────
   getReviewQueue: (limit = 50, offset = 0) =>
-    api.get('/mlops/review-queue', { params: { limit, offset } }),
+    getWithRetry('/mlops/review-queue', { params: { limit, offset } }),
 
   submitReview: (predId, action, correctedSpecies = null) =>
-    api.post(`/mlops/review/${predId}`, {
+    postWithRetry(`/mlops/review/${predId}`, {
       action,
       corrected_species: correctedSpecies,
     }),
 
-  getMlopsAnalytics: () => api.get('/mlops/analytics'),
+  getMlopsAnalytics: () => getWithRetry('/mlops/analytics'),
 };
 
 export default apiService;

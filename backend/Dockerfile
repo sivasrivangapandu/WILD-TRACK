@@ -28,4 +28,4 @@ COPY . .
 EXPOSE 8000
 
 # Run with Gunicorn using Uvicorn workers for production safety
-CMD ["gunicorn", "main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "120", "--graceful-timeout", "120", "--keep-alive", "5"]

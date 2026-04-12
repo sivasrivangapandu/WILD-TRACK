@@ -41,6 +41,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel
 import uvicorn
+import asyncio
+import logging
+
+# ── Suppress noisy health-check access logs ──────────────────────
+class _HealthLogFilter(logging.Filter):
+    def filter(self, record):
+        return "/health" not in record.getMessage()
+
+logging.getLogger("uvicorn.access").addFilter(_HealthLogFilter())
 
 from database import SessionLocal, init_db, DB_PATH
 from models import Prediction
@@ -500,14 +509,36 @@ ANIMAL_INFO = {
 
 
 _startup_time = None
+_model_ready = False
+
+
+async def _keep_alive_loop():
+    """Self-ping every 10 min to prevent Render free-tier spin-down."""
+    import requests as _req
+    external_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not external_url:
+        return  # Not deployed on Render; no need for keep-alive
+    health_url = f"{external_url}/health"
+    print(f"[KEEP-ALIVE] Pinging {health_url} every 10 min")
+    while True:
+        await asyncio.sleep(600)  # Every 10 minutes
+        try:
+            await asyncio.to_thread(lambda: _req.get(health_url, timeout=10))
+            print("[KEEP-ALIVE] Ping OK")
+        except Exception as e:
+            print(f"[KEEP-ALIVE] Ping failed: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model on startup."""
-    global _startup_time
+    """Load model on startup, start keep-alive pinger."""
+    global _startup_time, _model_ready
     _startup_time = datetime.datetime.utcnow()
     load_model()
+    _model_ready = model is not None
+    keep_alive_task = asyncio.create_task(_keep_alive_loop())
     yield
+    keep_alive_task.cancel()
     print("Shutting down...")
 
 
@@ -1140,12 +1171,19 @@ async def predict(
     # Read and preprocess (now returns quality metrics and stage1 meta)
     contents = await file.read()
     try:
-        img_array, original, quality_metrics, stage1_meta = preprocess_image(contents, expansion_margin=0.15)
+        # Run CPU-bound preprocessing in a thread to keep the event loop free
+        # for health-checks and other requests.
+        img_array, original, quality_metrics, stage1_meta = await asyncio.to_thread(
+            preprocess_image, contents, None, 0.15  # target_size=None, expansion_margin=0.15
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
 
-    # Predict with quality metrics and geo-aware pipeline
-    result = predict_single(img_array, original, quality_metrics=quality_metrics, lat=latitude, lon=longitude)
+    # Run CPU-bound prediction in a thread (prevents blocking health-checks)
+    result = await asyncio.to_thread(
+        predict_single, img_array, original,
+        True, True, quality_metrics, latitude, longitude
+    )
     
     #    DYNAMIC CROP EVALUATION FOR AMBIGUOUS SNOW TRACKS   
     # If the track is ambiguous (low confidence) and YOLO was used, 
@@ -1153,8 +1191,13 @@ async def predict(
     if stage1_meta.get("yolo_used") and result.get("confidence", 0) < 0.60 and result.get("predicted_class") in ["leopard", "wolf", "tiger", "dog", "fox", "cat", "unknown"]:
         try:
             print("  [DIAG] Ambiguous track detected. Running fallback evaluation without expansion margin...")
-            img_array_fb, original_fb, quality_metrics_fb, stage1_meta_fb = preprocess_image(contents, expansion_margin=0.0)
-            result_fb = predict_single(img_array_fb, original_fb, quality_metrics=quality_metrics_fb, lat=latitude, lon=longitude)
+            img_array_fb, original_fb, quality_metrics_fb, stage1_meta_fb = await asyncio.to_thread(
+                preprocess_image, contents, None, 0.0
+            )
+            result_fb = await asyncio.to_thread(
+                predict_single, img_array_fb, original_fb,
+                True, True, quality_metrics_fb, latitude, longitude
+            )
             
             result["fallback_meta"] = {
                 "initial_pred": result.get("predicted_class"),
@@ -1328,8 +1371,13 @@ async def predict_batch(files: List[UploadFile] = File(...),
     for file in files:
         try:
             contents = await file.read()
-            img_array, original, quality_metrics, stage1_meta = preprocess_image(contents)
-            result = predict_single(img_array, original, generate_heatmap=False, quality_metrics=quality_metrics)
+            img_array, original, quality_metrics, stage1_meta = await asyncio.to_thread(
+                preprocess_image, contents
+            )
+            result = await asyncio.to_thread(
+                predict_single, img_array, original,
+                False, True, quality_metrics  # generate_heatmap=False, use_tta=True
+            )
 
             pred_id = str(uuid.uuid4())[:8]
             blur_level = quality_metrics.get('blur_level', 100)
