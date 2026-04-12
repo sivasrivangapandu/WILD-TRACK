@@ -552,13 +552,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── CORS CONFIGURATION ───────────────────────────────────────────
+# Pull allowed origins from environment (comma-separated list)
+_cors_env = os.getenv("CORS_ORIGINS", "*")
+_origins = [o.strip() for o in _cors_env.split(",")] if _cors_env != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_origins,
+    allow_credentials=True if _origins != ["*"] else False, # Credentials + Wildcard = Browser Error
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+print(f"  [DEPLOY] Backend live with CORS origins: {_origins}")
+print(f"  [DEPLOY] Running via: {os.getenv('RENDER_EXTERNAL_URL', 'Local/Console')}")
 
 # Include routers
 app.include_router(chat_router)
