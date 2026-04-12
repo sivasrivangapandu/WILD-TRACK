@@ -54,7 +54,39 @@ logging.getLogger("uvicorn.access").addFilter(_HealthLogFilter())
 
 from database import SessionLocal, init_db, DB_PATH
 from models import Prediction
-from services.gemini_provider import is_gemini_available, generate_gemini_text
+from services.gemini_provider import is_gemini_available, generate_gemini_text, generate_gemini_multimodal
+
+# ... existing imports ...
+
+async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
+    """Gatekeeper: Check if image contains a footprint using Gemini.
+    
+    Returns:
+        - (True, "") if it's a footprint
+        - (False, "Reason") if it's not
+    """
+    if not is_gemini_available():
+        return True, "" # Fail-safe: proceed if AI key is missing
+
+    prompt = (
+        "Analyze this image. Does it contain an animal footprint or track in soil, mud, or sand? "
+        "Respond ONLY with 'YES' if it is a footprint, or 'NO' if it is anything else (people, faces, "
+        "landscapes, architecture, urban scenes, or random objects). "
+        "If unsure but it looks like a track, respond 'YES'."
+    )
+    
+    try:
+        # Use base64 encoded bytes for the new multimodal function
+        import base64
+        b64_data = base64.b64encode(image_bytes).decode('utf-8')
+        result = await asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data)
+        
+        if result and "NO" in result:
+            return False, "This image does not appear to contain an animal footprint. Please upload a clear track photo."
+        return True, ""
+    except Exception as e:
+        print(f"  [WARN] Gatekeeper check failed: {e}")
+        return True, "" # Fail-safe
 
 # Chat streaming and database routes
 from routes import chat_router, chat_db_router, auth_router
@@ -1178,6 +1210,13 @@ async def predict(
 
     # Read and preprocess (now returns quality metrics and stage1 meta)
     contents = await file.read()
+    
+    # ── STAGE 0: AI GATEKEEPER (Verify if image is a footprint) ──────
+    # This prevents hallucinations (e.g., photos of people being classified as animals)
+    is_valid, reason = await verify_is_footprint(contents)
+    if not is_valid:
+        raise HTTPException(status_code=422, detail=reason)
+    
     try:
         # Run CPU-bound preprocessing in a thread to keep the event loop free
         # for health-checks and other requests.
@@ -1185,7 +1224,7 @@ async def predict(
             preprocess_image, contents, None, 0.15  # target_size=None, expansion_margin=0.15
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid image: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid image content: {e}")
 
     # Run CPU-bound prediction in a thread (prevents blocking health-checks)
     result = await asyncio.to_thread(
@@ -1378,6 +1417,17 @@ async def predict_batch(files: List[UploadFile] = File(...),
     for file in files:
         try:
             contents = await file.read()
+            
+            # AI GATEKEEPER 🛡️ (Check if it's actually a footprint)
+            is_valid, reason = await verify_is_footprint(contents)
+            if not is_valid:
+                results.append({
+                    "filename": file.filename,
+                    "error": reason,
+                    "is_not_footprint": True
+                })
+                continue
+
             img_array, original, quality_metrics, stage1_meta = await asyncio.to_thread(
                 preprocess_image, contents
             )

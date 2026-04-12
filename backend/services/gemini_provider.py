@@ -46,7 +46,7 @@ def generate_gemini_text(
     max_output_tokens: int = 800,
 ) -> Optional[str]:
     """Generate text with Gemini and return stripped response text.
-
+    
     Returns None if Gemini is unavailable or response cannot be parsed.
     """
     if _client is None:
@@ -66,4 +66,35 @@ def generate_gemini_text(
         text = getattr(response, "text", None)
         return text.strip() if isinstance(text, str) and text.strip() else None
     except Exception:
+        return None
+
+
+def generate_gemini_multimodal(
+    prompt: str,
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+) -> Optional[str]:
+    """Analyze an image using Gemini (Multimodal).
+    
+    Useful for OOD detection (e.g., 'Is this a footprint?').
+    """
+    if _client is None:
+        return None
+
+    try:
+        response = _client.models.generate_content(
+            model=GEMINI_MODEL_NAME,
+            contents=[
+                {"inline_data": {"data": image_bytes, "mime_type": mime_type}},
+                prompt
+            ],
+            config={
+                "temperature": 0.1,
+                "max_output_tokens": 10,  # Keep it short (e.g., YES/NO)
+            },
+        )
+        text = getattr(response, "text", None)
+        return text.strip().upper() if isinstance(text, str) and text.strip() else None
+    except Exception as e:
+        print(f"  [DEBUG] Gemini Multimodal error: {e}")
         return None

@@ -115,8 +115,14 @@ export default function BatchProcessPage() {
                 <tr key={i} className="border-t b-subtle hover:bg-[var(--bg-hover)]">
                   <td className="px-4 py-3 text-gray-500">{i + 1}</td>
                   <td className="px-4 py-3 font-mono text-xs truncate max-w-[200px]">{r.file}</td>
-                  <td className={`px-4 py-3 capitalize font-semibold ${r.is_unknown ? 'text-amber-500' : ''}`}>
-                    {r.is_unknown ? (<><span>Unknown</span><span className="text-xs ml-1 font-normal text-gray-500">(closest: {r.raw_class})</span></>) : r.species}
+                  <td className={`px-4 py-3 capitalize font-semibold ${r.error ? 'text-red-500' : r.is_unknown ? 'text-amber-500' : ''}`}>
+                    {r.error ? (
+                      <span className="text-xs italic">{r.error}</span>
+                    ) : r.is_unknown ? (
+                      <><span className="text-sm">Unknown</span><span className="text-[10px] ml-1 font-normal text-gray-500">(closest: {r.raw_class})</span></>
+                    ) : (
+                      <span className="text-sm">{r.species}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
