@@ -64,6 +64,8 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
     Returns:
         - (True, "") if it's a footprint
         - (False, "Reason") if it's not
+
+    Uses 5-second timeout to prevent blocking predictions.
     """
     if not is_gemini_available():
         return True, ""  # Fail-safe: proceed if Gemini unavailable
@@ -79,7 +81,12 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
     try:
         import base64
         b64_data = base64.b64encode(image_bytes).decode('utf-8')
-        result = await asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data)
+
+        # Use timeout to prevent hanging predictions
+        result = await asyncio.wait_for(
+            asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 5),
+            timeout=6.0  # Total timeout including thread overhead
+        )
 
         if result is None:
             print(f"  [DIAG] Gatekeeper: Gemini returned None")
@@ -95,6 +102,9 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
         print(f"  [DIAG] Gatekeeper: Image accepted. Gemini response: {result}")
         return True, ""
 
+    except asyncio.TimeoutError:
+        print(f"  [WARN] Gatekeeper timeout - Gemini took too long, proceeding with prediction")
+        return True, ""  # Fail-safe: don't block predictions
     except Exception as e:
         print(f"  [WARN] Gatekeeper check failed: {e}")
         return True, ""  # Fail-safe

@@ -73,40 +73,68 @@ def generate_gemini_multimodal(
     prompt: str,
     image_b64: str,
     mime_type: str = "image/jpeg",
+    timeout: int = 10,
 ) -> Optional[str]:
-    """Analyze an image using Gemini (Multimodal).
+    """Analyze an image using Gemini (Multimodal) with timeout.
 
     Args:
         prompt: Text prompt for analysis
         image_b64: Base64-encoded image string
         mime_type: MIME type of the image
+        timeout: API call timeout in seconds
 
     Useful for OOD detection (e.g., 'Is this a footprint?').
+    Returns None if API fails or times out.
     """
     if _client is None:
         return None
 
     try:
-        response = _client.models.generate_content(
-            model=GEMINI_MODEL_NAME,
-            contents=[
-                {
-                    "inline_data": {
-                        "data": image_b64,
-                        "mime_type": mime_type
-                    }
-                },
-                {
-                    "text": prompt
-                }
-            ],
-            config={
-                "temperature": 0.1,
-                "max_output_tokens": 10,  # Keep it short (e.g., YES/NO)
-            },
-        )
-        text = getattr(response, "text", None)
-        return text.strip().upper() if isinstance(text, str) and text.strip() else None
+        import signal
+
+        def call_gemini():
+            try:
+                response = _client.models.generate_content(
+                    model=GEMINI_MODEL_NAME,
+                    contents=[
+                        {
+                            "inline_data": {
+                                "data": image_b64,
+                                "mime_type": mime_type
+                            }
+                        },
+                        {
+                            "text": prompt
+                        }
+                    ],
+                    generation_config={
+                        "temperature": 0.1,
+                        "max_output_tokens": 10,
+                    },
+                )
+                text = getattr(response, "text", None)
+                return text.strip().upper() if isinstance(text, str) and text.strip() else None
+            except Exception as e:
+                print(f"  [DEBUG] Gemini API error: {e}")
+                return None
+
+        # Call Gemini with a timeout
+        import threading
+        result = [None]
+
+        def target():
+            result[0] = call_gemini()
+
+        thread = threading.Thread(target=target, daemon=True)
+        thread.start()
+        thread.join(timeout=timeout)
+
+        if thread.is_alive():
+            print(f"  [DEBUG] Gemini call timed out after {timeout}s")
+            return None
+
+        return result[0]
+
     except Exception as e:
-        print(f"  [DEBUG] Gemini Multimodal error: {e}")
+        print(f"  [DEBUG] Gemini Multimodal wrapper error: {e}")
         return None
