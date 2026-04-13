@@ -13,6 +13,9 @@ from database import get_db
 from schemas import ChatStreamRequest, SaveChatRequest, SaveChatResponse
 from services import get_model_tokens, metrics, save_chat_to_db
 
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])

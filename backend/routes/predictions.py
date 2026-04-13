@@ -9,7 +9,7 @@ import os
 import json
 import uuid
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 
@@ -21,6 +21,9 @@ from services.prediction_service import (
     model, model_metadata, class_names, model_download_status,
     predict_single, upload_to_cloudinary,
 )
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 
 router = APIRouter()
 

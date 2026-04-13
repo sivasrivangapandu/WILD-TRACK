@@ -1,13 +1,16 @@
 """Database CRUD operations for chat sessions."""
 
 import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from database import get_db
 from models import ChatSession, ChatMessage
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 
 
 # Pydantic schemas for request/response validation

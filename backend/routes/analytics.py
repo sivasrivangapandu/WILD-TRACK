@@ -9,15 +9,18 @@ GET /model-metrics  - Model performance metrics
 import os
 import json
 import datetime
+from typing import Optional, Any
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import Optional
 
 from config import MODELS_DIR
 from database import get_db
 from models import Prediction
 from services.prediction_service import model_metadata, class_names, IMG_SIZE
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 
 router = APIRouter()
 

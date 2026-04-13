@@ -4,6 +4,7 @@ Auth routes — register, login, me, profile update, password change, avatar upl
 import os
 import uuid
 import shutil
+from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, timezone
@@ -11,6 +12,9 @@ from datetime import datetime, timezone
 from database import get_db
 from models.user_model import User
 from auth import hash_password, verify_password, create_access_token, decode_access_token
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

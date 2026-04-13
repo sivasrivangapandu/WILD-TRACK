@@ -11,7 +11,7 @@ import json
 import uuid
 import base64
 import datetime
-from typing import Optional
+from typing import Optional, Any
 
 import cv2
 import numpy as np
@@ -23,6 +23,9 @@ from config import UPLOADS_DIR
 from database import get_db
 from models import Prediction
 from services.image_processing import preprocess_image
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 from services.prediction_service import (
     model, model_metadata, class_names, predict_single, IMG_SIZE,
 )

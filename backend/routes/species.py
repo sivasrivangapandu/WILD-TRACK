@@ -9,6 +9,7 @@ GET  /api/animal-info  - API Ninjas wildlife knowledge
 
 import json
 import re
+from typing import Any
 
 import requests
 from fastapi import APIRouter, HTTPException, Query, Depends
@@ -16,6 +17,9 @@ from pydantic import BaseModel
 
 from config import ANIMAL_INFO, NINJA_API_KEY
 from database import get_db
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 from models import Prediction
 from services.prediction_service import class_names
 from services.gemini_provider import is_gemini_available, generate_gemini_text
