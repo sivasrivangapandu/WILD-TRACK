@@ -18,7 +18,6 @@ import numpy as np
 from PIL import Image
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
 from config import UPLOADS_DIR
 from database import get_db

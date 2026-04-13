@@ -527,11 +527,22 @@ export default function UploadPage() {
         return;
       }
 
-      const timeoutMessage = 'Prediction is taking longer than expected. The server may be waking up. Please wait a few seconds and try again.';
-      const msg = String(err?.message || '');
-      const friendlyError = /timeout|timed out|econnaborted/i.test(msg)
-        ? timeoutMessage
-        : (msg || 'Prediction failed');
+      // Extract detailed error message from backend response
+      let friendlyError = 'Prediction failed';
+      
+      // Try to get error detail from backend response first
+      if (err.response?.data?.detail) {
+        friendlyError = err.response.data.detail;
+      } else if (err.response?.status === 422) {
+        // Unprocessable Entity — likely validation error (non-footprint image)
+        friendlyError = err.response.data?.detail || 'Image validation failed. Please check the image content.';
+      } else {
+        // Fallback to generic timeout/error messages
+        const timeoutMessage = 'Prediction is taking longer than expected. The server may be waking up. Please wait a few seconds and try again.';
+        const msg = String(err?.message || '');
+        friendlyError = /timeout|timed out|econnaborted/i.test(msg) ? timeoutMessage : msg || 'Prediction failed';
+      }
+      
       updateState({ error: friendlyError });
     } finally {
       updateState({ loading: false });
@@ -786,7 +797,40 @@ export default function UploadPage() {
                 )}
 
                 {error && (
-                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm">{error}</div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="p-5 rounded-xl border border-red-500/30 bg-red-500/5"
+                  >
+                    <div className="flex items-start gap-3">
+                      <FiAlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-red-500 font-semibold mb-2 text-sm">Upload Failed</div>
+                        <div className="text-red-500/90 text-sm whitespace-pre-wrap leading-relaxed font-normal">
+                          {/* Support basic markdown formatting */}
+                          {typeof error === 'string' ? 
+                            error.split('\n').map((line, idx) => {
+                              // Format **bold** text
+                              const formatted = line.split(/\*\*([^*]+)\*\*/g).map((part, i) => 
+                                i % 2 === 1 ? <span key={i} className="font-semibold text-red-500">{part}</span> : part
+                              );
+                              // Format - bullet points
+                              if (line.trim().startsWith('-')) {
+                                return (
+                                  <div key={idx} className="ml-2 text-red-500/80">
+                                    {formatted}
+                                  </div>
+                                );
+                              }
+                              return <div key={idx}>{formatted}</div>;
+                            })
+                            : error
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
 
                 <AnimatePresence>

@@ -12,8 +12,6 @@ import datetime
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query, Depends
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 from typing import Optional
 
 from config import MODELS_DIR

@@ -13,8 +13,6 @@ import re
 import requests
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 
 from config import ANIMAL_INFO, NINJA_API_KEY
 from database import get_db

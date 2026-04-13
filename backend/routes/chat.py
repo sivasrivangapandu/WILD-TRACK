@@ -8,7 +8,6 @@ from typing import AsyncGenerator, Optional, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
 from database import get_db
 from schemas import ChatStreamRequest, SaveChatRequest, SaveChatResponse

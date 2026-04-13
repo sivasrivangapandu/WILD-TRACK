@@ -1,7 +1,10 @@
-"""Unified Gemini provider for WildTrackAI services.
+"""Unified Gemini provider for WildTrackAI services (FIXED - Lazy loading).
 
 Initializes Gemini once and exposes helper functions so callers do not
 duplicate SDK setup logic.
+
+CRITICAL: The google.genai SDK import hangs on some Windows systems with
+application control policies. This is deferred to first use, not module load.
 """
 
 import os
@@ -13,24 +16,42 @@ GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
 
 _client = None
 _init_error = None
+_gemini_initialized = False
 
-
+# Print config at module import time, but defer SDK init
 if GEMINI_API_KEY:
-    try:
-        from google import genai
-
-        _client = genai.Client(api_key=GEMINI_API_KEY)
-        print(f"  [OK] Gemini AI initialized ({GEMINI_MODEL_NAME})")
-    except Exception as exc:
-        _init_error = exc
-        _client = None
-        print(f"  [WARN] Gemini init failed: {exc} -- falling back to local engine")
+    print(f"  [OK] Gemini API key configured ({GEMINI_MODEL_NAME})")
 else:
     print("  [WARN] No GEMINI_API_KEY found -- using rule-based chat")
 
 
+def _ensure_gemini_loaded():
+    """Lazy-load Gemini SDK only when first needed (deferred from module import)."""
+    global _client, _init_error, _gemini_initialized
+    
+    if _gemini_initialized:
+        return
+    
+    _gemini_initialized = True
+    
+    if not GEMINI_API_KEY:
+        return
+    
+    try:
+        # Import is deferred to first use to avoid Windows application control hang
+        from google import genai
+
+        _client = genai.Client(api_key=GEMINI_API_KEY)
+        print(f"  [OK] Gemini client ready (lazy-loaded)")
+    except Exception as exc:
+        _init_error = exc
+        _client = None
+        print(f"  [WARN] Gemini init failed: {exc} -- falling back to local engine")
+
+
 def is_gemini_available() -> bool:
     """Return whether Gemini client is ready to serve requests."""
+    _ensure_gemini_loaded()
     return _client is not None
 
 
@@ -49,6 +70,8 @@ def generate_gemini_text(
     
     Returns None if Gemini is unavailable or response cannot be parsed.
     """
+    _ensure_gemini_loaded()
+    
     if _client is None:
         return None
 
@@ -86,6 +109,8 @@ def generate_gemini_multimodal(
     Useful for OOD detection (e.g., 'Is this a footprint?').
     Returns None if API fails or times out.
     """
+    _ensure_gemini_loaded()
+    
     if _client is None:
         return None
 

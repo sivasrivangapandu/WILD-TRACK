@@ -12,7 +12,6 @@ import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
-from sqlalchemy.orm import Session
 
 from config import UPLOADS_DIR, CONFIDENCE_THRESHOLD, ANIMAL_INFO
 from database import get_db

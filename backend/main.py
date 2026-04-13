@@ -59,55 +59,173 @@ from services.gemini_provider import is_gemini_available, generate_gemini_text, 
 # ... existing imports ...
 
 async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
-    """Gatekeeper: Check if image contains a footprint using Gemini.
+    """Gatekeeper: Check if image contains a footprint using Gemini or local heuristics.
 
     Returns:
         - (True, "") if it's a footprint
-        - (False, "Reason") if it's not
+        - (False, "Detailed Reason") if it's not
 
-    Uses 5-second timeout to prevent blocking predictions.
+    Uses Gemini when available, falls back to local heuristics otherwise.
     """
-    if not is_gemini_available():
-        return True, ""  # Fail-safe: proceed if Gemini unavailable
+    
+    # Try Gemini first if available
+    if is_gemini_available():
+        try:
+            import base64
+            prompt = (
+                "Strictly analyze this image. Does it contain an animal footprint or paw print "
+                "(a track in soil, mud, sand, or similar substrate showing the impression of an animal's foot)? "
+                "Respond ONLY with 'YES' for footprints or 'NO' for anything else. "
+                "Examples of NO: people, faces, animals themselves, landscapes, buildings, vehicles, art, drawings. "
+                "Examples of YES: pawprints, hoofprints, tracks in mud/dirt/snow."
+            )
+            b64_data = base64.b64encode(image_bytes).decode('utf-8')
 
-    prompt = (
-        "Strictly analyze this image. Does it contain an animal footprint or paw print "
-        "(a track in soil, mud, sand, or similar substrate showing the impression of an animal's foot)? "
-        "Respond ONLY with 'YES' for footprints or 'NO' for anything else. "
-        "Examples of NO: people, faces, animals themselves, landscapes, buildings, vehicles, art, drawings. "
-        "Examples of YES: pawprints, hoofprints, tracks in mud/dirt/snow."
-    )
+            # Use timeout to prevent hanging predictions
+            result = await asyncio.wait_for(
+                asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 5),
+                timeout=6.0  # Total timeout including thread overhead
+            )
 
-    try:
-        import base64
-        b64_data = base64.b64encode(image_bytes).decode('utf-8')
+            if result is None:
+                print(f"  [DIAG] Gatekeeper: Gemini returned None, falling back to local check")
+                # Fall through to local heuristics
+            elif result.startswith("NO"):
+                reason = (
+                    "❌ **Not a Footprint Detected**\n\n"
+                    "This image does not appear to contain an animal footprint or paw print.\n\n"
+                    "**Please upload:**\n"
+                    "- Clear photos of animal tracks/footprints in natural substrates\n"
+                    "- Visible in soil, mud, sand, snow, or dirt\n"
+                    "- With good lighting to show pad/toe details\n\n"
+                    "**Avoid uploading:**\n"
+                    "- Photos of animals themselves\n"
+                    "- People, faces, or human footprints\n"
+                    "- Screenshots, drawings, or artwork\n"
+                    "- Blurry or unclear images\n"
+                    "- Unrelated landscapes without tracks"
+                )
+                print(f"  [DIAG] Gatekeeper: Image rejected by Gemini")
+                return False, reason
+            else:
+                print(f"  [DIAG] Gatekeeper: Image accepted by Gemini")
+                return True, ""
 
-        # Use timeout to prevent hanging predictions
-        result = await asyncio.wait_for(
-            asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 5),
-            timeout=6.0  # Total timeout including thread overhead
+        except asyncio.TimeoutError:
+            print(f"  [WARN] Gatekeeper timeout - Gemini took too long, using local check")
+        except Exception as e:
+            print(f"  [WARN] Gatekeeper Gemini check failed: {e}, using local check")
+    
+    # Fallback: Local heuristic-based footprint detection
+    print(f"  [DIAG] Using local footprint detection")
+    is_footprint, reason_msg = _local_footprint_check(image_bytes)
+    if not is_footprint:
+        detailed_reason = (
+            "❌ **Image Quality or Content Issue**\n\n"
+            f"Detection reason: {reason_msg}\n\n"
+            "**Please upload:**\n"
+            "- Clear photos of animal tracks/footprints in natural substrates\n"
+            "- Visible in soil, mud, sand, snow, or dirt\n"
+            "- With good lighting to show pad/toe details\n"
+            "- Minimum image size: 200×200 pixels\n\n"
+            "**Avoid uploading:**\n"
+            "- Photos of animals themselves\n"
+            "- People, faces, or human footprints\n"
+            "- Screenshots, drawings, or artwork\n"
+            "- Very blurry or out-of-focus images\n"
+            "- Unrelated landscapes without tracks"
         )
+        return False, detailed_reason
+    
+    return True, ""
 
-        if result is None:
-            print(f"  [DIAG] Gatekeeper: Gemini returned None")
-            return True, ""  # Fail-safe if Gemini fails
 
-        # Check response - reject if clearly "NO"
-        if result.startswith("NO"):
-            reason = "This image does not appear to contain an animal footprint. Please upload a clear track photo (footprint/paw print in soil/mud/sand)."
-            print(f"  [DIAG] Gatekeeper: Image rejected. Gemini response: {result}")
-            return False, reason
-
-        # Default: allow (anything other than NO, including "YES" or unclear responses)
-        print(f"  [DIAG] Gatekeeper: Image accepted. Gemini response: {result}")
+def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
+    """Local heuristic-based footprint detection when Gemini is unavailable.
+    
+    Returns:
+        - (True, "") if image appears to be a footprint
+        - (False, "Reason") if image doesn't look like a footprint
+    """
+    try:
+        # Decode image
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return False, "Could not decode image file"
+        
+        h, w = img.shape[:2]
+        
+        # Check minimum size
+        if h < 100 or w < 100:
+            return False, f"Image too small ({w}×{h}px). Minimum 200×200px recommended"
+        
+        if h > 8000 or w > 8000:
+            return False, f"Image too large ({w}×{h}px). Maximum 8000px recommended"
+        
+        # Check if image has reasonable content (not completely black/white)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+        mean_brightness = np.mean(gray)
+        
+        if mean_brightness < 5:
+            return False, "Image is almost completely black - appears blank"
+        
+        if mean_brightness > 250:
+            return False, "Image is almost completely white - appears blank"
+        
+        # Check image variance (blank images have very low variance)
+        variance = np.var(gray)
+        if variance < 50:
+            return False, "Image lacks detail/contrast - may be blank or uniform color"
+        
+        # Check for footprint-like features using edge detection
+        # Footprints typically have:
+        # - Defined edges (high gradient)
+        # - Regional structure (pads, toes)
+        # - Local contrast variations
+        
+        # Canny edge detection
+        edges = cv2.Canny(gray, 50, 150)
+        edge_ratio = np.sum(edges > 0) / (h * w)
+        
+        # Footprints should have moderate edge density (10-40%)
+        if edge_ratio < 0.02:
+            return False, "Image lacks sufficient edge detail - too smooth or uniform"
+        
+        if edge_ratio > 0.6:
+            return False, "Image has too many edges - appears noisy or cluttered"
+        
+        # Check for connected components (footprints have 1-5 main regions: pads + toes)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Filter out very small contours (noise)
+        significant_contours = [c for c in contours if cv2.contourArea(c) > (h * w * 0.001)]
+        
+        if len(significant_contours) < 1:
+            return False, "Image contains no distinct object or shape"
+        
+        if len(significant_contours) > 50:
+            return False, "Image is too fragmented - contains too many separate objects"
+        
+        # Check for reasonable fill factor
+        # Footprints typically occupy 5-80% of image
+        total_area = sum(cv2.contourArea(c) for c in significant_contours)
+        fill_ratio = total_area / (h * w)
+        
+        if fill_ratio < 0.02:
+            return False, "Subject occupies less than 2% of image - too small or distant"
+        
+        if fill_ratio > 0.95:
+            return False, "Subject occupies too much of image - likely not a footprint photo"
+        
+        # All checks passed
         return True, ""
-
-    except asyncio.TimeoutError:
-        print(f"  [WARN] Gatekeeper timeout - Gemini took too long, proceeding with prediction")
-        return True, ""  # Fail-safe: don't block predictions
+        
     except Exception as e:
-        print(f"  [WARN] Gatekeeper check failed: {e}")
-        return True, ""  # Fail-safe
+        print(f"  [WARN] Local footprint check error: {e}")
+        # On error, fail-safe: allow the image to proceed
+        return True, ""
 
 # Chat streaming and database routes
 from routes import chat_router, chat_db_router, auth_router
