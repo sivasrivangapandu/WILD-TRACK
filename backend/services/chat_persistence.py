@@ -1,8 +1,11 @@
 import datetime
 import time
-from sqlalchemy.orm import Session
+from typing import Any
 
 from models import ChatSession, ChatMessage
+
+# Type alias for database connection (using sqlite3 in fallback mode)
+Session = Any
 
 
 def save_chat_to_db(

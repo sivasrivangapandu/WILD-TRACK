@@ -280,9 +280,9 @@ for d in [UPLOADS_DIR, OUTPUTS_DIR]:
     os.makedirs(d, exist_ok=True)
 
 # ============================================
-# DATABASE INITIALIZATION
+# DATABASE INITIALIZATION (moved to lifespan)
 # ============================================
-init_db()
+# init_db() moved to lifespan() to prevent blocking server startup
 
 # ============================================
 # MODEL LOADING
@@ -705,6 +705,13 @@ async def lifespan(app: FastAPI):
     """Start server immediately, load model in background."""
     global _startup_time, _model_ready
     _startup_time = datetime.datetime.utcnow()
+
+    # Initialize database (tables created if not exist)
+    try:
+        init_db()
+        print("[OK] Database initialized")
+    except Exception as e:
+        print(f"[WARN] Database initialization failed: {e}")
 
     # Start model loading in background without blocking server startup
     def load_model_background():
