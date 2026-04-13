@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUpload, FiX, FiImage, FiActivity, FiEye, FiCheckCircle, FiAlertTriangle, FiCpu, FiDownload, FiTarget, FiInfo, FiHelpCircle, FiGrid, FiCrosshair, FiMaximize2, FiLayers, FiNavigation } from 'react-icons/fi';
@@ -388,6 +388,7 @@ export default function UploadPage() {
   const { file, preview, result, loading, error, showHeatmap, isCameraActive } = uploadState;
 
   const [dragActive, setDragActive] = useState(false);
+  const abortControllerRef = useRef(null);
 
   // Helper to update global state partially
   const updateState = (updates) => setUploadState(prev => ({ ...prev, ...updates }));
@@ -449,6 +450,34 @@ export default function UploadPage() {
     }
   }, []);
 
+  // Cleanup: Cancel pending requests and reset global state on unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending upload requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Clean up all injected global styles
+      const styleIds = ['wildtrack-animation-override', 'wildtrack-gradient-anim'];
+      styleIds.forEach(id => {
+        const style = document.getElementById(id);
+        if (style) style.remove();
+      });
+
+      // Reset global upload state to prevent state pollution
+      setUploadState({
+        file: null,
+        preview: null,
+        result: null,
+        loading: false,
+        error: null,
+        showHeatmap: false,
+        isCameraActive: false
+      });
+    };
+  }, [setUploadState]);
+
   const handleFile = useCallback((f) => {
     if (!f) return;
 
@@ -469,6 +498,10 @@ export default function UploadPage() {
   const handleSubmit = async () => {
     if (!file) return;
     updateState({ loading: true, error: null });
+
+    // Create a new AbortController for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       // Create FormData
       const formData = new FormData();
@@ -488,6 +521,12 @@ export default function UploadPage() {
       const resData = await api.predict(file, null); // Skip location parameter in api wrapper too
       updateState({ result: resData.data });
     } catch (err) {
+      // Don't update state if request was aborted (component unmounted/navigated away)
+      if (err.name === 'AbortError') {
+        console.log('Upload request cancelled');
+        return;
+      }
+
       const timeoutMessage = 'Prediction is taking longer than expected. The server may be waking up. Please wait a few seconds and try again.';
       const msg = String(err?.message || '');
       const friendlyError = /timeout|timed out|econnaborted/i.test(msg)
@@ -547,8 +586,11 @@ export default function UploadPage() {
       if (style) style.remove();
     }
     return () => {
-      const style = document.getElementById(styleId);
-      if (style) style.remove();
+      // Always cleanup on unmount or when result changes away from showing bg
+      if (!showBg) {
+        const style = document.getElementById(styleId);
+        if (style) style.remove();
+      }
     };
   }, [result]);
 

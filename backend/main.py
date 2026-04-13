@@ -584,11 +584,21 @@ async def _keep_alive_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load model on startup, start keep-alive pinger."""
+    """Start server immediately, load model in background."""
     global _startup_time, _model_ready
     _startup_time = datetime.datetime.utcnow()
-    load_model()
-    _model_ready = model is not None
+
+    # Start model loading in background without blocking server startup
+    def load_model_background():
+        try:
+            load_model()
+            print("[INFO] Model loaded successfully in background")
+        except Exception as e:
+            print(f"[ERROR] Failed to load model: {e}")
+
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, load_model_background)
+
     keep_alive_task = asyncio.create_task(_keep_alive_loop())
     yield
     keep_alive_task.cancel()
