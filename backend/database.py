@@ -68,12 +68,80 @@ def get_db():
             pass
         def commit(self):
             pass
+        def query(self, *args, **kwargs):
+            # Return an empty query object for compatibility
+            return SessionWrapper.EmptyQuery()
+    
+    class EmptyQuery:
+        def group_by(self, *args, **kwargs):
+            return self
+        def filter(self, *args, **kwargs):
+            return self
+        def offset(self, *args, **kwargs):
+            return self
+        def limit(self, *args, **kwargs):
+            return self
+        def order_by(self, *args, **kwargs):
+            return self
+        def all(self):
+            return []
+        def scalar(self):
+            return None
+        def count(self):
+            return 0
     
     conn = _db.get_connection()
     try:
         yield SessionWrapper(conn)
     finally:
         pass
+
+
+class SessionLocalFactory:
+    """Factory for creating database sessions in fallback mode."""
+    def __call__(self):
+        """Create a session wrapper for fallback mode."""
+        class SessionWrapper:
+            def __init__(self, conn):
+                self.conn = conn
+            
+            def close(self):
+                pass
+            
+            def add(self, obj):
+                """Fallback add - data is not persisted in fallback mode."""
+                pass
+            
+            def commit(self):
+                """Fallback commit - does nothing."""
+                pass
+            
+            def query(self, *args, **kwargs):
+                """Return empty query for fallback mode."""
+                class EmptyQuery:
+                    def group_by(self, *args, **kwargs):
+                        return self
+                    def filter(self, *args, **kwargs):
+                        return self
+                    def offset(self, *args, **kwargs):
+                        return self
+                    def limit(self, *args, **kwargs):
+                        return self
+                    def order_by(self, *args, **kwargs):
+                        return self
+                    def all(self):
+                        return []
+                    def scalar(self):
+                        return None
+                    def count(self):
+                        return 0
+                return EmptyQuery()
+        
+        return SessionWrapper(_db.get_connection())
+
+
+# Create a factory-like SessionLocal
+SessionLocal = SessionLocalFactory()
 
 
 def init_db():
