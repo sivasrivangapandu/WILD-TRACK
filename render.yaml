@@ -1,7 +1,6 @@
 services:
-  # -------------------------------------------------------------
   # Backend: FastAPI / Uvicorn Service
-  # -------------------------------------------------------------
+  # Production-ready configuration with proper health checks and timeouts
   - type: web
     name: wildtrack-backend
     env: python
@@ -11,37 +10,58 @@ services:
       pip install -r requirements.txt
     startCommand: |
       cd backend
-      gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --graceful-timeout 120 --keep-alive 5
+      gunicorn main:app \
+        --workers 2 \
+        --worker-class uvicorn.workers.UvicornWorker \
+        --bind 0.0.0.0:$PORT \
+        --timeout 120 \
+        --graceful-timeout 120 \
+        --keep-alive 5 \
+        --access-logfile - \
+        --error-logfile -
+    
+    # Health check configuration
+    healthCheckPath: /health
+    healthCheckInterval: 30
+    
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: PORT
+        value: 8000
+      # CRITICAL: Update these with your actual Render service URLs
+      # Get from: https://dashboard.render.com/services
       - key: CORS_ORIGINS
-        value: https://wildtrack-frontend-iuww.onrender.com,https://wildtrack-ai.onrender.com
+        value: https://wildtrack-frontend-iuww.onrender.com,http://localhost:3000,http://localhost:8000
       - key: JWT_SECRET
         generateValue: true
       - key: GEMINI_API_KEY
-        sync: false # Set via dashboard
+        sync: false
       - key: NINJA_API_KEY
-        sync: false # Set via dashboard
+        sync: false
       - key: CLOUDINARY_URL
-        sync: false # Set via dashboard
+        sync: false
 
-  # -------------------------------------------------------------
   # Frontend: React / Vite Static Site
-  # -------------------------------------------------------------
+  # Configured with environment variables for production backend
   - type: static_site
     name: wildtrack-frontend
     region: oregon
     buildCommand: |
       cd frontend
       npm install
+      npm ci --prefer-offline --no-audit
       npm run build
     publishPath: frontend/dist
     envVars:
+      # CRITICAL: Update with your actual backend URL
+      # Get from backend service logs on Render dashboard
       - key: VITE_API_URL
         value: https://wildtrack-backend-j9n8.onrender.com
+      - key: NODE_ENV
+        value: production
     routes:
-      # React SPA routing rule
+      # React SPA routing - serves index.html for all non-static routes
       - type: rewrite
         source: /*
         destination: /index.html
