@@ -27,6 +27,8 @@ import uuid
 import base64
 import shutil
 import datetime
+import io
+import logging
 from pathlib import Path
 from typing import List, Optional
 from contextlib import asynccontextmanager
@@ -52,9 +54,17 @@ class _HealthLogFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(_HealthLogFilter())
 
+# Setup logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 from database import SessionLocal, init_db, DB_PATH
 from models import Prediction
 from services.gemini_provider import is_gemini_available, generate_gemini_text, generate_gemini_multimodal
+from services.enhanced_prediction import (
+    ImageTypeClassifier, ConfidenceFilter, PredictionEnhancer, 
+    PredictionPostProcessor
+)
 
 # ... existing imports ...
 
@@ -1655,6 +1665,151 @@ async def predict_batch(files: List[UploadFile] = File(...),
         "failed": len([r for r in results if "error" in r]),
         "results": results,
     }
+
+
+@app.post("/classify-image")
+async def classify_image(file: UploadFile = File(...)):
+    """
+    Classify image into: animal/human/thing/other
+    Uses both Gemini AI analysis and local heuristics.
+    """
+    try:
+        contents = await file.read()
+        
+        # Convert to numpy array for analysis
+        img_pil = Image.open(io.BytesIO(contents))
+        img_array = np.array(img_pil.convert('RGB'))
+        
+        # Method 1: Image feature analysis
+        image_type_1, confidence_1 = ImageTypeClassifier.classify_by_image_analysis(img_array)
+        
+        # Create a dummy prediction dict for method 2
+        dummy_pred = {
+            "predictions": [{
+                "class": "test",
+                "confidence": 0.5
+            }]
+        }
+        image_type_2 = ImageTypeClassifier.classify_by_features(dummy_pred)
+        
+        # Use the more confident result
+        image_type = image_type_1 if confidence_1 > 0.6 else image_type_2
+        
+        # Calculate image quality
+        quality = PredictionEnhancer.calculate_image_quality(img_array)
+        
+        return {
+            "success": True,
+            "image_type": image_type,
+            "confidence": round(confidence_1, 3),
+            "method": "heuristic_analysis",
+            "image_quality": round(quality, 3),
+            "detailed_scores": {
+                "heuristic_analysis_type": image_type_1,
+                "heuristic_confidence": round(confidence_1, 3),
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error in classify_image: {e}")
+        raise HTTPException(status_code=400, detail=f"Error classifying image: {str(e)}")
+
+
+@app.post("/predict/enhanced")
+async def predict_enhanced(
+    file: UploadFile = File(...),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None)
+):
+    """
+    Enhanced prediction with:
+    - Image type classification (animal/human/thing)
+    - Confidence filtering
+    - Image quality assessment
+    - Certainty levels
+    """
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded.")
+
+    try:
+        contents = await file.read()
+        
+        # Verify it's a footprint
+        is_valid, reason = await verify_is_footprint(contents)
+        if not is_valid:
+            raise HTTPException(status_code=422, detail=reason)
+        
+        # Preprocess
+        img_array, original, quality_metrics, stage1_meta = await asyncio.to_thread(
+            preprocess_image, contents, None, 0.15
+        )
+        
+        # Get base prediction
+        result = await asyncio.to_thread(
+            predict_single, img_array, original,
+            True, True, quality_metrics, latitude, longitude
+        )
+        
+        # Classify image type
+        image_type_1, confidence_1 = ImageTypeClassifier.classify_by_image_analysis(img_array)
+        
+        # Get quality score
+        quality_score = PredictionEnhancer.calculate_image_quality(img_array)
+        
+        # Extract predictions list
+        predictions_list = result.get("top3", [])
+        if not predictions_list:
+            predictions_list = [{
+                "class": result.get("predicted_class", "unknown"),
+                "confidence": result.get("confidence", 0)
+            }]
+        
+        # Filter by confidence
+        filtered_preds = ConfidenceFilter.filter_predictions(
+            predictions_list, 
+            image_type="animal",
+            top_k=5
+        )
+        
+        # Check if top prediction meets confidence threshold
+        is_confident = ConfidenceFilter.is_confident(filtered_preds, "animal")
+        
+        # Create enhanced response
+        response = {
+            "success": True,
+            "prediction": {
+                "class": result.get("predicted_class"),
+                "confidence": round(result.get("confidence", 0), 4),
+                "confidence_level": "High" if result.get("confidence", 0) > 0.7 else "Medium" if result.get("confidence", 0) > 0.4 else "Low",
+                "meets_threshold": is_confident
+            },
+            "image_analysis": {
+                "type": image_type_1,
+                "type_confidence": round(confidence_1, 3),
+                "quality_score": round(quality_score, 3),
+                "quality_level": "Excellent" if quality_score > 0.8 else "Good" if quality_score > 0.6 else "Fair" if quality_score > 0.4 else "Poor"
+            },
+            "top_predictions": [
+                {
+                    "class": p.get("class"),
+                    "confidence": round(p.get("confidence", 0), 4),
+                    "rank": i + 1
+                }
+                for i, p in enumerate(filtered_preds[:5])
+            ],
+            "metadata": {
+                "total_alternatives": len(filtered_preds),
+                "quality_metrics": quality_metrics,
+                "stage1_meta": stage1_meta
+            }
+        }
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in predict_enhanced: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Prediction error: {str(e)}")
 
 
 @app.get("/species")
