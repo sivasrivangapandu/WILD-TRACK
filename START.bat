@@ -36,14 +36,33 @@ goto menu
 :backend
 cls
 echo.
-echo Starting Backend Server...
+echo ╔════════════════════════════════════════════════════════════╗
+echo ║           WILDTRACKAI BACKEND SERVER STARTUP               ║
+echo ╚════════════════════════════════════════════════════════════╝
 echo.
 cd /d "d:\Wild Track AI\backend"
 call venv\Scripts\activate.bat
+
 echo.
-echo FastAPI Server starting at http://localhost:8000
-echo API Documentation: http://localhost:8000/docs
+echo Running startup diagnostics...
+python startup_diagnostics.py
+
+if %errorlevel% neq 0 (
+    echo.
+    echo ⚠  Some diagnostics failed - but continuing anyway...
+    echo.
+    timeout /t 3
+)
+
 echo.
+echo ✓ Starting FastAPI server...
+echo   API Documentation: http://localhost:8000/docs
+echo   Health Check: http://localhost:8000/health
+echo   API Base: http://localhost:8000
+echo.
+echo Server is starting - please wait 10-15 seconds for model to load...
+echo.
+
 python main.py
 pause
 goto menu

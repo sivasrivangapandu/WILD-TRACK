@@ -20,9 +20,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;     // 2 min for general requests
 const PREDICT_TIMEOUT_MS = 300_000;     // 5 min for predict (TF on CPU is slow)
 const PREDICT_RETRY_COUNT = 3;          // 3 retries = 4 total attempts
 const PREDICT_RETRY_DELAY_MS = 2_500;
-const AUTH_TIMEOUT_MS = 60_000;
-const AUTH_RETRY_COUNT = 2;
-const AUTH_RETRY_DELAY_MS = 2_000;
+const AUTH_TIMEOUT_MS = 60_000;         // 1 min for auth
+const AUTH_RETRY_COUNT = 4;             // Increased - server startup can be slow
+const AUTH_RETRY_DELAY_MS = 1_500;      // Shorter between retries
 const GET_RETRY_COUNT = 2;
 
 const api = axios.create({
@@ -37,45 +37,93 @@ const isRetryableError = (err) => {
   if (!err) return false;
   if (err.isTimeout) return true;
   if (err.code === 'ECONNABORTED') return true;
+  if (err.code === 'ECONNREFUSED') return true;  // Connection refused = server not running
   const status = err.status || err.response?.status;
-  if ([0, 502, 503, 504].includes(status)) return true;
-  if (status === 429) return true;
+  if ([0, 502, 503, 504].includes(status)) return true;  // Server errors and connection issues
+  if (status === 429) return true;  // Rate limit
   const msg = String(err.message || '').toLowerCase();
-  return msg.includes('timeout') || msg.includes('network error') || msg.includes('failed to fetch');
+  return msg.includes('timeout') || msg.includes('network') || msg.includes('failed to fetch');
 };
 
 // ── Warm-up Helpers ───────────────────────────────────────────────
+let _lastHealthCheck = 0;
+let _serverAlive = false;
+
 const warmupBackend = async () => {
   try {
-    await api.get('/health', { timeout: 15_000 });
-  } catch {
-    // Best-effort warmup only.
+    const res = await api.get('/health', { timeout: 8_000 });
+    _serverAlive = res.status === 200;
+    _lastHealthCheck = Date.now();
+    console.log('[WildTrack] ✓ Backend warmup OK', res.data?.model_loaded ? '(model ready)' : '(model loading)');
+  } catch (e) {
+    _serverAlive = false;
+    console.log('[WildTrack] Warmup failed:', e.message);
   }
 };
 
 /**
- * Wait until backend model is loaded (handles Render cold-start).
- * Returns true when ready or after maxWait (let server send a proper 503).
+ * Ensure backend server is alive (responds to requests).
+ * Separate from model readiness - just needs HTTP response.
  */
-let _backendReady = false;
-const ensureBackendReady = async (maxWaitMs = 90_000) => {
-  if (_backendReady) return true;
+const ensureBackendAlive = async (maxWaitMs = 60_000) => {
+  if (_serverAlive && (Date.now() - _lastHealthCheck) < 10_000) {
+    return true;
+  }
+  
   const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
+  let attempts = 0;
+  
+  while (Date.now() - start < maxWaitMs && attempts < 20) {
     try {
-      const res = await api.get('/health', { timeout: 15_000 });
-      if (res.data?.model_loaded) {
-        _backendReady = true;
-        console.log('[WildTrack] Backend model ready');
+      const res = await api.get('/health', { timeout: 8_000 });
+      if (res.status === 200) {
+        _serverAlive = true;
+        console.log('[WildTrack] ✓ Server is alive');
         return true;
       }
-      console.log('[WildTrack] Model still loading, waiting...');
-    } catch {
-      console.log('[WildTrack] Backend not reachable yet, waiting...');
+    } catch (e) {
+      console.log(`[WildTrack] Server starting... (attempt ${attempts + 1}/20)`);
     }
-    await sleep(4_000);
+    attempts++;
+    await sleep(3_000);
   }
-  // Proceed anyway; predict endpoint will return a proper 503
+  
+  return true;  // Timeout - proceed anyway
+};
+
+/**
+ * Wait until backend model is loaded (handles slow model initialization).
+ */
+let _backendReady = false;
+let _lastModelCheck = 0;
+
+const ensureModelReady = async (maxWaitMs = 120_000) => {
+  if (_backendReady && (Date.now() - _lastModelCheck) < 30_000) {
+    return true;
+  }
+  
+  const start = Date.now();
+  let attempts = 0;
+  
+  while (Date.now() - start < maxWaitMs && attempts < 40) {
+    try {
+      const res = await api.get('/health', { timeout: 8_000 });
+      _lastModelCheck = Date.now();
+      
+      if (res.data?.model_loaded) {
+        _backendReady = true;
+        console.log('[WildTrack] ✓ Model is ready');
+        return true;
+      }
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      console.log(`[WildTrack] Model loading (${elapsed}s, attempt ${attempts + 1}/40)...`);
+    } catch (e) {
+      // Silent
+    }
+    attempts++;
+    await sleep(3_000);
+  }
+  
   return true;
 };
 
@@ -85,18 +133,29 @@ const postWithRetry = async (url, body, options = {}) => {
   const maxRetries = Number.isInteger(options.retries) ? options.retries : AUTH_RETRY_COUNT;
   const retryDelayMs = Number.isInteger(options.retryDelayMs) ? options.retryDelayMs : AUTH_RETRY_DELAY_MS;
 
+  // Pre-flight: ensure backend is alive
+  await ensureBackendAlive(30_000);
+
   let attempt = 0;
-  while (true) {
+  while (attempt <= maxRetries) {
     try {
-      return await api.post(url, body, { timeout: timeoutMs });
+      const result = await api.post(url, body, { timeout: timeoutMs });
+      if (attempt > 0) {
+        console.log(`[WildTrack] ✓ POST ${url} succeeded on retry ${attempt}`);
+      }
+      return result;
     } catch (err) {
-      if (attempt >= maxRetries || !isRetryableError(err)) {
+      if (!isRetryableError(err) || attempt >= maxRetries) {
+        console.error(`[WildTrack] POST ${url} failed after ${attempt + 1} attempt(s)`);
         throw err;
       }
+      
       attempt += 1;
-      console.warn(`[WildTrack] POST ${url} attempt ${attempt}/${maxRetries} failed, retrying...`);
+      const backoffMs = retryDelayMs * Math.pow(1.5, attempt);
+      console.warn(`[WildTrack] POST ${url} failed - retry ${attempt}/${maxRetries} in ${backoffMs}ms`);
+      
       await warmupBackend();
-      await sleep(retryDelayMs * Math.pow(1.5, attempt));
+      await sleep(backoffMs);
     }
   }
 };
@@ -132,15 +191,31 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const message = error.response?.data?.detail || error.message || 'Network error';
-    console.error('[API Error]', message);
+    const status = error.response?.status;
+    
+    // Smart error logging with context
+    if (status === 503) {
+      console.warn('[API 503] Service unavailable - model may still be loading');
+    } else if (status === 502 || error.code === 'ECONNREFUSED') {
+      console.warn('[API] Connection refused - backend may not be running');
+    } else if (error.isTimeout || error.code === 'ECONNABORTED') {
+      console.warn('[API] Request timeout - backend may be slow');
+    } else if (status >= 500) {
+      console.error('[API', status + ']', message);
+    } else if (status) {
+      console.error('[API', status + ']', message);
+    } else {
+      console.error('[API Network]', error.code || 'Unknown error');
+    }
+    
     // Auto-logout on 401
-    if (error.response?.status === 401) {
+    if (status === 401) {
       localStorage.removeItem('wildtrack_token');
       localStorage.removeItem('wildtrack_user');
     }
 
     const normalizedError = new Error(message);
-    normalizedError.status = error.response?.status;
+    normalizedError.status = status;
     normalizedError.code = error.code;
     normalizedError.isTimeout = error.code === 'ECONNABORTED' || /timeout/i.test(String(message));
     throw normalizedError;
@@ -155,6 +230,9 @@ const _tokenParam = () => {
 
 const apiService = {
   health: () => api.get('/health'),
+  ensureBackendAlive,
+  ensureModelReady,
+  warmupBackend,
 
   // ── Auth ────────────────────────────────────────────────────────
   register: (name, email, password) =>
@@ -193,8 +271,9 @@ const apiService = {
     const maxRetries = Number.isInteger(options.retries) ? options.retries : PREDICT_RETRY_COUNT;
     const retryDelayMs = Number.isInteger(options.retryDelayMs) ? options.retryDelayMs : PREDICT_RETRY_DELAY_MS;
 
-    // Ensure backend model is loaded (cold-start protection)
-    await ensureBackendReady();
+    // Ensure both server and model are ready
+    await ensureBackendAlive(30_000);
+    await ensureModelReady(120_000);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -204,22 +283,23 @@ const apiService = {
     }
 
     let attempt = 0;
-    while (true) {
+    while (attempt <= maxRetries) {
       try {
         return await api.post('/predict', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: timeoutMs,
         });
       } catch (err) {
-        if (attempt >= maxRetries || !isRetryableError(err)) {
+        if (!isRetryableError(err) || attempt >= maxRetries) {
           throw err;
         }
         attempt += 1;
-        console.warn(`[WildTrack] Predict attempt ${attempt}/${maxRetries} failed, retrying...`);
-        // Invalidate readiness cache so warmup re-checks model
+        const backoffMs = retryDelayMs * Math.pow(1.5, attempt);
+        console.warn(`[WildTrack] Predict attempt ${attempt}/${maxRetries} failed - retry in ${backoffMs}ms`);
+        // Invalidate readiness cache
         _backendReady = false;
-        await ensureBackendReady(30_000);
-        await sleep(retryDelayMs * Math.pow(1.5, attempt));
+        await ensureModelReady(60_000);
+        await sleep(backoffMs);
       }
     }
   },

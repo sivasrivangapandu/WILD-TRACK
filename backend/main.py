@@ -705,29 +705,37 @@ async def lifespan(app: FastAPI):
     """Start server immediately, load model in background."""
     global _startup_time, _model_ready
     _startup_time = datetime.datetime.utcnow()
+    
+    print("[INFO] ========== SERVER STARTUP ==========")
+    print(f"[INFO] Startup time: {_startup_time.isoformat()}")
 
     # Initialize database (tables created if not exist)
     try:
         init_db()
-        print("[OK] Database initialized")
+        print("[OK] Database initialized successfully")
     except Exception as e:
         print(f"[WARN] Database initialization failed: {e}")
 
     # Start model loading in background without blocking server startup
     def load_model_background():
         try:
+            print("[MODEL] Starting background model load...")
             load_model()
-            print("[INFO] Model loaded successfully in background")
+            print("[MODEL] ✓ Model loaded successfully")
         except Exception as e:
-            print(f"[ERROR] Failed to load model: {e}")
+            print(f"[MODEL] ✗ Failed to load model: {e}")
+            print("[MODEL] Server will run in demo mode")
 
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, load_model_background)
+    
+    print("[INFO] Server startup complete - API ready at http://localhost:8000")
+    print("[INFO] Model loading in background...")
 
     keep_alive_task = asyncio.create_task(_keep_alive_loop())
     yield
     keep_alive_task.cancel()
-    print("Shutting down...")
+    print("[INFO] Shutting down...")
 
 
 # ============================================
@@ -1283,20 +1291,22 @@ async def root(request: Request):
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check(request: Request):
-    """System health check with model download status."""
+    """System health check - always returns 200 to indicate server is alive.
+    Check model_loaded field to see if model is ready for predictions."""
     if request.method == "HEAD":
         return Response(status_code=200)
-    # Determine overall health status
+    
+    uptime = (datetime.datetime.utcnow() - _startup_time).total_seconds() if _startup_time else 0
     is_healthy = model is not None and model_download_status.get("status") != "partial"
     
     return {
-        "status": "healthy" if is_healthy else "degraded",
+        "status": "ok",  # Server always responds with ok
+        "uptime_seconds": uptime,
         "model_loaded": model is not None,
-        "model_load_diagnostics": model_load_diagnostics,
+        "model_loading_progress": model_load_diagnostics,
         "model_download_status": model_download_status,
         "gradcam_available": gradcam is not None,
         "classes": len(class_names),
-        "class_names": class_names if len(class_names) <= 10 else class_names[:10],
         "database": os.path.exists(DB_PATH),
         "gemini_ai": is_gemini_available(),
         "ninja_api": bool(NINJA_API_KEY),
