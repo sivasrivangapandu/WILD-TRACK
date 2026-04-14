@@ -24,9 +24,9 @@ except Exception as e:
     print(f"❌ Backend: NOT RESPONDING - {e}")
 
 # Test Frontend
-print("\n🔍 Testing Frontend (http://localhost:3001)...")
+print("\n🔍 Testing Frontend (http://localhost:3000)...")
 try:
-    with urllib.request.urlopen("http://localhost:3001", timeout=5) as response:
+    with urllib.request.urlopen("http://localhost:3000", timeout=5) as response:
         if response.status == 200:
             print(f"✅ Frontend: RUNNING (Status: {response.status})")
         else:
@@ -38,6 +38,6 @@ print("\n" + "=" * 60)
 print("SUMMARY")
 print("=" * 60)
 print("✅ Both services are running!")
-print("\n📱 Access the app at: http://localhost:3001")
+print("\n📱 Access the app at: http://localhost:3000")
 print("📚 API docs at: http://localhost:8000/docs")
 print("=" * 60)
