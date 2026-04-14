@@ -16,14 +16,15 @@ const fallbackUrl = window.location.hostname === 'localhost' || window.location.
 export const API_BASE = import.meta.env.VITE_API_URL || fallbackUrl;
 
 // ── Timeout & Retry Configuration ─────────────────────────────────
+// AGGRESSIVE SETTINGS FOR RENDER FREE TIER (prevents "Server unavailable" errors)
 const DEFAULT_TIMEOUT_MS = 120_000;     // 2 min for general requests
 const PREDICT_TIMEOUT_MS = 300_000;     // 5 min for predict (TF on CPU is slow)
-const PREDICT_RETRY_COUNT = 3;          // 3 retries = 4 total attempts
+const PREDICT_RETRY_COUNT = 5;          // 5 retries = 6 total attempts
 const PREDICT_RETRY_DELAY_MS = 2_500;
-const AUTH_TIMEOUT_MS = 60_000;         // 1 min for auth
-const AUTH_RETRY_COUNT = 4;             // Increased - server startup can be slow
-const AUTH_RETRY_DELAY_MS = 1_500;      // Shorter between retries
-const GET_RETRY_COUNT = 2;
+const AUTH_TIMEOUT_MS = 120_000;        // 2 min for auth (Render free tier slow!)
+const AUTH_RETRY_COUNT = 15;            // 15 retries = 16 total attempts (VERY aggressive)
+const AUTH_RETRY_DELAY_MS = 1_000;      // 1s between retries (frequent attempts)
+const GET_RETRY_COUNT = 5;              // More retries for GET requests too
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -64,8 +65,9 @@ const warmupBackend = async () => {
 /**
  * Ensure backend server is alive (responds to requests).
  * Separate from model readiness - just needs HTTP response.
+ * AGGRESSIVE for Render free-tier
  */
-const ensureBackendAlive = async (maxWaitMs = 60_000) => {
+const ensureBackendAlive = async (maxWaitMs = 180_000) => {
   if (_serverAlive && (Date.now() - _lastHealthCheck) < 10_000) {
     return true;
   }
@@ -73,31 +75,34 @@ const ensureBackendAlive = async (maxWaitMs = 60_000) => {
   const start = Date.now();
   let attempts = 0;
   
-  while (Date.now() - start < maxWaitMs && attempts < 20) {
+  while (Date.now() - start < maxWaitMs && attempts < 60) {
     try {
-      const res = await api.get('/health', { timeout: 8_000 });
+      const res = await api.get('/health', { timeout: 10_000 });
       if (res.status === 200) {
         _serverAlive = true;
-        console.log('[WildTrack] ✓ Server is alive');
+        console.log('[WildTrack] ✓ Server is alive after attempts:', attempts + 1);
         return true;
       }
     } catch (e) {
-      console.log(`[WildTrack] Server starting... (attempt ${attempts + 1}/20)`);
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      console.log(`[WildTrack] ⏳ Server starting... (${elapsed}s, attempt ${attempts + 1}/60)`);
     }
     attempts++;
-    await sleep(3_000);
+    await sleep(2_000);  // More frequent attempts
   }
   
-  return true;  // Timeout - proceed anyway
+  console.warn('[WildTrack] ⚠️ Backend not responding - proceeding anyway');
+  return true;  // Timeout - proceed anyway, let actual request fail and retry
 };
 
 /**
  * Wait until backend model is loaded (handles slow model initialization).
+ * AGGRESSIVE for Render free-tier
  */
 let _backendReady = false;
 let _lastModelCheck = 0;
 
-const ensureModelReady = async (maxWaitMs = 120_000) => {
+const ensureModelReady = async (maxWaitMs = 180_000) => {
   if (_backendReady && (Date.now() - _lastModelCheck) < 30_000) {
     return true;
   }
@@ -105,25 +110,26 @@ const ensureModelReady = async (maxWaitMs = 120_000) => {
   const start = Date.now();
   let attempts = 0;
   
-  while (Date.now() - start < maxWaitMs && attempts < 40) {
+  while (Date.now() - start < maxWaitMs && attempts < 60) {
     try {
-      const res = await api.get('/health', { timeout: 8_000 });
+      const res = await api.get('/health', { timeout: 10_000 });
       _lastModelCheck = Date.now();
       
       if (res.data?.model_loaded) {
         _backendReady = true;
-        console.log('[WildTrack] ✓ Model is ready');
+        console.log('[WildTrack] ✓ Model is ready!');
         return true;
       }
       const elapsed = Math.round((Date.now() - start) / 1000);
-      console.log(`[WildTrack] Model loading (${elapsed}s, attempt ${attempts + 1}/40)...`);
+      console.log(`[WildTrack] ⏳ Model loading (${elapsed}s, attempt ${attempts + 1}/60)...`);
     } catch (e) {
-      // Silent
+      // Silent - will retry
     }
     attempts++;
-    await sleep(3_000);
+    await sleep(2_000);  // Check every 2 seconds
   }
   
+  console.warn('[WildTrack] ⚠️ Model not ready - proceeding anyway');
   return true;
 };
 
