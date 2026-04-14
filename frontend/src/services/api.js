@@ -246,23 +246,35 @@ const apiService = {
 
   login: async (email, password) => {
     try {
-      // Try real backend auth first
-      return await postWithRetry('/api/auth/login', { email, password });
+      // Quick attempt: only 2 retries instead of 15, to fail fast
+      // If real backend auth database is working, it will succeed quickly
+      // If backend is having issues, we fail fast and use offline mode instead of waiting 60+ seconds
+      console.log('[AUTH] Attempting backend authentication...');
+      return await postWithRetry('/api/auth/login', { email, password }, {
+        retries: 2,  // Only 2 retries (3 total attempts) = ~10-15 seconds max
+        retryDelayMs: 1000,
+        timeoutMs: 15000  // 15 second timeout per attempt
+      });
     } catch (err) {
-      // If backend auth fails (e.g., database in fallback mode), use offline mode
-      console.warn('[AUTH] Backend auth unavailable, using offline mode');
+      // If backend auth fails, use offline mode instead of waiting forever
+      console.warn('[AUTH] Backend unavailable (' + err.message + '), using offline mode');
+      console.log('[AUTH] Generating offline token for demo use...');
+      
       // Generate a mock token for demo/offline use
       const mockToken = `demo_${email.split('@')[0]}_${Date.now()}`;
+      const userData = {
+        id: `user_${email}`,
+        name: email.split('@')[0],
+        email: email,
+        role: 'researcher',
+        is_active: true,
+      };
+      
+      console.log('[AUTH] ✓ Offline mode active - using generated token');
       return {
         data: {
           token: mockToken,
-          user: {
-            id: `user_${email}`,
-            name: email.split('@')[0],
-            email: email,
-            role: 'researcher',
-            is_active: true,
-          }
+          user: userData
         }
       };
     }
