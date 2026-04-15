@@ -10,6 +10,9 @@ application control policies. This is deferred to first use, not module load.
 import os
 from typing import Optional
 
+# Load environment variables first, before reading them
+from dotenv import load_dotenv
+load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()

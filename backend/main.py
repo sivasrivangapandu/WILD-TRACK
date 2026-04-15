@@ -20,6 +20,10 @@ Usage:
     uvicorn main:app --host 0.0.0.0 --port 8000
 """
 
+# CRITICAL: Load environment variables FIRST, before any other imports
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import sys
 import json
@@ -36,7 +40,6 @@ from contextlib import asynccontextmanager
 import numpy as np
 import cv2
 from PIL import Image
-from dotenv import load_dotenv
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,9 +95,10 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
             b64_data = base64.b64encode(image_bytes).decode('utf-8')
 
             # Use timeout to prevent hanging predictions
+            # Increased timeout to 10s to allow API response (was 6s)
             result = await asyncio.wait_for(
-                asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 5),
-                timeout=6.0  # Total timeout including thread overhead
+                asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 10),
+                timeout=12.0  # Total timeout including thread overhead
             )
 
             if result is None:
@@ -127,7 +131,7 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
             print(f"  [WARN] Gatekeeper Gemini check failed: {e}, using local check")
     
     # Fallback: Local heuristic-based footprint detection
-    print(f"  [DIAG] Using local footprint detection")
+    print(f"  [DIAG] Using local footprint detection (more lenient thresholds)")
     is_footprint, reason_msg = _local_footprint_check(image_bytes)
     if not is_footprint:
         detailed_reason = (
@@ -199,34 +203,36 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         edges = cv2.Canny(gray, 50, 150)
         edge_ratio = np.sum(edges > 0) / (h * w)
         
-        # Footprints should have moderate edge density (10-40%)
-        if edge_ratio < 0.02:
+        # Footprints should have moderate edge density (1-70%)
+        # Reduced from 2% to catch distant/small footprints
+        if edge_ratio < 0.01:
             return False, "Image lacks sufficient edge detail - too smooth or uniform"
         
-        if edge_ratio > 0.6:
+        if edge_ratio > 0.7:
             return False, "Image has too many edges - appears noisy or cluttered"
         
         # Check for connected components (footprints have 1-5 main regions: pads + toes)
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # Filter out very small contours (noise)
-        significant_contours = [c for c in contours if cv2.contourArea(c) > (h * w * 0.001)]
+        significant_contours = [c for c in contours if cv2.contourArea(c) > (h * w * 0.0005)]
         
         if len(significant_contours) < 1:
             return False, "Image contains no distinct object or shape"
         
-        if len(significant_contours) > 50:
+        if len(significant_contours) > 100:
             return False, "Image is too fragmented - contains too many separate objects"
         
         # Check for reasonable fill factor
-        # Footprints typically occupy 5-80% of image
+        # Footprints can range from 0.5% (distant) to 90% (close-up)
         total_area = sum(cv2.contourArea(c) for c in significant_contours)
         fill_ratio = total_area / (h * w)
         
-        if fill_ratio < 0.02:
-            return False, "Subject occupies less than 2% of image - too small or distant"
+        # Reduced from 0.02 to 0.005 to allow small/distant footprints
+        if fill_ratio < 0.005:
+            return False, "Subject occupies less than 0.5% of image - too small or distant"
         
-        if fill_ratio > 0.95:
+        if fill_ratio > 0.97:
             return False, "Subject occupies too much of image - likely not a footprint photo"
         
         # All checks passed
@@ -243,7 +249,6 @@ from routes import chat_router, chat_db_router, auth_router
 # ============================================
 # CONFIGURATION
 # ============================================
-load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
