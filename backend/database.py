@@ -116,6 +116,15 @@ class SessionLocalFactory:
                 """Fallback commit - does nothing."""
                 pass
             
+            def execute(self, query):
+                """Execute raw SQL queries for testing/diagnostics."""
+                try:
+                    cursor = self.conn.cursor()
+                    cursor.execute(str(query))
+                    return cursor
+                except Exception:
+                    return None
+            
             def query(self, *args, **kwargs):
                 """Return empty query for fallback mode."""
                 class EmptyQuery:
