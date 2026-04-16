@@ -76,11 +76,12 @@ async def predict(
             print(f"  [DIAG] Fallback evaluation failed: {e}")
 
     # Snow track heuristic
-    if result.get("predicted_class") in ["leopard", "tiger"]:
+    # Note: increased brightness threshold to 210 (actual snow) and removed tiger to prevent false swaps.
+    if result.get("predicted_class") in ["leopard"]:
         wolf_item = next((item for item in result.get("top3", []) if item["class"] == "wolf"), None)
-        if wolf_item and wolf_item["confidence"] > 0.15:
+        if wolf_item and wolf_item["confidence"] > 0.25:
             brightness = quality_metrics.get("brightness", 0) if quality_metrics else 0
-            if brightness > 130:
+            if brightness > 210:
                 print(f"  [DIAG] Snow/Wolf heuristic triggered. Brightness: {brightness:.1f}.")
                 result["predicted_class"] = "wolf"
                 result["species"] = "wolf"
