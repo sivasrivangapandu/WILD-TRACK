@@ -1479,10 +1479,11 @@ async def predict(
         raise HTTPException(status_code=400, detail=f"Invalid image content: {e}")
 
     # Run CPU-bound prediction in a thread (prevents blocking health-checks)
-    # OPTIMIZED: Disable TTA for SPEED on Render (use_tta=False for fast single-pass inference)
+    # OPTIMIZED: Disable TTA & GradCAM for SPEED on Render
+    # generate_heatmap=False, use_tta=False = pure speed (2-3 seconds total)
     result = await asyncio.to_thread(
         predict_single, img_array, original,
-        True, False, quality_metrics, latitude, longitude
+        False, False, quality_metrics, latitude, longitude
     )
             
     #    DOMAIN HEURISTIC: SNOW TRACK OBFUSCATION   
