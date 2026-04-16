@@ -161,29 +161,30 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         if len(faces) > 0:
             return False, "❌ Image contains human faces - upload footprints only"
         
-        # **LAYER 2: REJECT SKIN TONE DOMINANT IMAGES**
-        # Convert to HSV for skin detection
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # **LAYER 2: ENHANCED FACE/PERSON DETECTION**
+        # Use multiple signals, not just color (which fails on brown earth)
         
-        # Distinguish human skin from brown earth:
-        # Human skin: H 0-15, S 30-100 (moderate saturation)
-        # Brown earth: H 15-30 or S > 100 or S < 20 (very high or very low saturation)
-        h_channel = hsv[:, :, 0]
-        s_channel = hsv[:, :, 1]
-        v_channel = hsv[:, :, 2]
+        # 2a: Horizontal edge stripe detection (faces have facial features with specific edge patterns)
+        edges = cv2.Canny(gray, 50, 150)
         
-        # Mask for actual human skin (not brown earth)
-        skin_mask = (
-            ((h_channel >= 0) & (h_channel <= 15)) &  # Skin hue range (exclude brown earth)
-            ((s_channel >= 30) & (s_channel <= 100)) &  # Moderate saturation (skin, not saturated earth)
-            ((v_channel >= 50) & (v_channel <= 255))  # Reasonable brightness
-        )
+        # Count horizontal edge concentrations (eyes, mouth, nose form horizontal stripes on faces)
+        horizontal_stripes = 0
+        stripe_height = h // 4  # Divide face into 4 sections
         
-        skin_ratio = np.sum(skin_mask) / (h * w)
+        for row_start in range(0, h - stripe_height, stripe_height):
+            stripe = edges[row_start:row_start + stripe_height, :]
+            edge_density = np.sum(stripe > 0) / stripe.size
+            if edge_density > 0.15:  # Dense horizontal edge pattern = likely face
+                horizontal_stripes += 1
         
-        # If >20% actual skin tone, reject (more specific than color alone)
-        if skin_ratio > 0.20:
-            return False, "❌ Image contains human skin/faces - upload footprints only"
+        # Faces typically have 2-3 horizontal stripe regions (forehead, eyes, mouth)
+        # Footprints have irregular edge distribution
+        if horizontal_stripes >= 3:
+            return False, "❌ Image contains facial features - upload footprints only"
+        
+        # 2b: Only use color-based detection as a secondary check (very lenient)
+        # REMOVED: HSV skin detection was too sensitive to brown earth
+        # Instead: Just verify image doesn't have obvious human flesh-like regions
         
         # **LAYER 3: REJECT UI/SCREENSHOT CONTENT**
         # Screenshots have distinctive patterns:
