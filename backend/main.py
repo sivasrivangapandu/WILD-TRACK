@@ -154,7 +154,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=8, minSize=(30, 30))
         
         if len(faces) > 0:
             return False, "❌ Image contains human faces - upload footprints only"
@@ -172,7 +172,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         skin_ratio = np.sum(mask_skin > 0) / (h * w)
         
         # If >10% skin tone, reject (people, animals)
-        if skin_ratio > 0.10:
+        if skin_ratio > 0.25:
             return False, "❌ Image contains too much skin/hair tone - not a footprint"
         
         # **LAYER 3: REJECT UI/SCREENSHOT CONTENT**
