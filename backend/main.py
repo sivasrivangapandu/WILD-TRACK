@@ -154,6 +154,8 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
+        # minNeighbors=8 reduces false positives on natural textures (cracked earth, etc)
+        # while still catching actual human faces
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=8, minSize=(30, 30))
         
         if len(faces) > 0:
@@ -163,17 +165,25 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # Convert to HSV for skin detection
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Skin tone ranges in HSV
-        # Brown skin: H: 0-20, 340-360; S: 20-255; V: 0-255
-        lower_skin = np.array([0, 20, 0], dtype=np.uint8)
-        upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+        # Distinguish human skin from brown earth:
+        # Human skin: H 0-15, S 30-100 (moderate saturation)
+        # Brown earth: H 15-30 or S > 100 or S < 20 (very high or very low saturation)
+        h_channel = hsv[:, :, 0]
+        s_channel = hsv[:, :, 1]
+        v_channel = hsv[:, :, 2]
         
-        mask_skin = cv2.inRange(hsv, lower_skin, upper_skin)
-        skin_ratio = np.sum(mask_skin > 0) / (h * w)
+        # Mask for actual human skin (not brown earth)
+        skin_mask = (
+            ((h_channel >= 0) & (h_channel <= 15)) &  # Skin hue range (exclude brown earth)
+            ((s_channel >= 30) & (s_channel <= 100)) &  # Moderate saturation (skin, not saturated earth)
+            ((v_channel >= 50) & (v_channel <= 255))  # Reasonable brightness
+        )
         
-        # If >10% skin tone, reject (people, animals)
-        if skin_ratio > 0.25:
-            return False, "❌ Image contains too much skin/hair tone - not a footprint"
+        skin_ratio = np.sum(skin_mask) / (h * w)
+        
+        # If >20% actual skin tone, reject (more specific than color alone)
+        if skin_ratio > 0.20:
+            return False, "❌ Image contains human skin/faces - upload footprints only"
         
         # **LAYER 3: REJECT UI/SCREENSHOT CONTENT**
         # Screenshots have distinctive patterns:
