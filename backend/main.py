@@ -207,18 +207,19 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # **LAYER 3: REJECT UI/SCREENSHOT CONTENT**
         # Screenshots have distinctive patterns:
         # 1. High color uniformity (UI uses flat colors)
-        # 2. Many straight lines/rectangles (UI elements)
+        # 2. Many LONG straight lines/rectangles (UI elements, not shadows)
         # 3. Text detection (buttons, labels)
         # 4. Limited color palette
         
-        # 3a: Detect straight lines (characteristic of UI/screenshots)
+        # 3a: Detect ONLY VERY PROMINENT straight lines (UI borders, not shadows/edges)
         edges = cv2.Canny(gray, 100, 200)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=30, maxLineGap=10)
+        # INCREASED THRESHOLDS: Only catch clear UI lines, not natural shadows
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=60, maxLineGap=10)
         line_count = len(lines) if lines is not None else 0
         
-        # Screenshots typically have 20+ straight lines (UI borders, text lines)
-        # Footprints have few straight lines
-        if line_count > 25:
+        # INCREASED THRESHOLD: Screenshots have 50+ very prominent lines (UI borders)
+        # Natural footprints with shadows/edges are <30 prominent lines
+        if line_count > 50:
             return False, "❌ Image contains too many straight lines/UI elements - not a natural footprint"
         
         # 3b: Detect uniform color regions (characteristic of UI)
@@ -235,8 +236,9 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
                     if np.var(region) < 15:
                         uniform_regions += 1
         
-        # Screenshots have many uniform regions; footprints have varied texture
-        if uniform_regions > 6:
+        # Screenshots have MANY uniform regions (10+); footprints have varied texture
+        # INCREASED THRESHOLD: from 6 to 12 to be less aggressive on natural images
+        if uniform_regions > 12:
             return False, "❌ Image has too many uniform color blocks - characteristic of screenshots/diagrams"
         
         # 3c: Check for corner/edge regularity (UI has regular grids)
@@ -249,9 +251,10 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         except:
             pass
         
-        # Screenshots with UI buttons/fields have regular corner patterns (50+)
-        # Footprints are organic, irregular (< 30 corners expected)
-        if corner_count > 50:
+        # INCREASED THRESHOLD: Screenshots with UI buttons/fields have 100+ regular corners
+        # Natural footprints are organic, irregular (<50 corners expected)
+        # CHANGED from 50 to 100 to be more lenient on natural texture variations
+        if corner_count > 100:
             return False, "❌ Image contains too many geometric corners - likely a screenshot or diagram, not a footprint"
         
         
