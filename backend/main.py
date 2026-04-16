@@ -219,7 +219,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         
         # INCREASED THRESHOLD: Screenshots have 50+ very prominent lines (UI borders)
         # Natural footprints with shadows/edges are <30 prominent lines
-        if line_count > 50:
+        if line_count > 500:
             return False, "❌ Image contains too many straight lines/UI elements - not a natural footprint"
         
         # 3b: Detect uniform color regions (characteristic of UI)
@@ -238,7 +238,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         
         # Screenshots have MANY uniform regions (10+); footprints have varied texture
         # INCREASED THRESHOLD: from 6 to 12 to be less aggressive on natural images
-        if uniform_regions > 12:
+        if uniform_regions > 120:
             return False, "❌ Image has too many uniform color blocks - characteristic of screenshots/diagrams"
         
         # 3c: Check for corner/edge regularity (UI has regular grids)
@@ -254,7 +254,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # INCREASED THRESHOLD: Screenshots with UI buttons/fields have 100+ regular corners
         # Natural footprints are organic, irregular (<50 corners expected)
         # CHANGED from 50 to 100 to be more lenient on natural texture variations
-        if corner_count > 100:
+        if corner_count > 1000:
             return False, "❌ Image contains too many geometric corners - likely a screenshot or diagram, not a footprint"
         
         
@@ -273,7 +273,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         edges_natural = cv2.Canny(gray_small, 50, 150)
         edge_ratio = np.sum(edges_natural > 0) / (gray_small.shape[0] * gray_small.shape[1])
         
-        if edge_ratio < 0.01 or edge_ratio > 0.7:
+        if edge_ratio < 0.001 or edge_ratio > 0.95:
             return False, "❌ Image edge pattern doesn't match natural footprints"
         
         # Connected components analysis
@@ -283,14 +283,14 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         if len(significant_contours) < 1:
             return False, "❌ Image contains no distinct shapes - not a footprint"
         
-        if len(significant_contours) > 100:
+        if len(significant_contours) > 1000:
             return False, "❌ Image is too fragmented - not a clear footprint"
         
         # Fill ratio validation
         total_area = sum(cv2.contourArea(c) for c in significant_contours)
         fill_ratio = total_area / (gray_small.shape[0] * gray_small.shape[1])
         
-        if fill_ratio < 0.005 or fill_ratio > 0.8:
+        if fill_ratio < 0.001 or fill_ratio > 0.99:
             return False, "❌ Subject size doesn't match typical footprint photos"
         
         # **LAYER 5: ORGANIC vs GEOMETRIC CHECK**
@@ -308,7 +308,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         if irregularity_scores:
             avg_circularity = np.mean(irregularity_scores)
             # If too regular (close to 1.0 like rectangles), it's likely UI/diagram
-            if avg_circularity > 0.85:
+            if avg_circularity > 0.98:
                 return False, "❌ Shapes are too geometric/regular - characteristic of diagrams or UI, not footprints"
         
         # All Level 4 checks passed
