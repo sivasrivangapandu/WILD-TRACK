@@ -50,7 +50,7 @@ import asyncio
 import logging
 import requests
 
-# ── Suppress noisy health-check access logs ──────────────────────
+# â”€â”€ Suppress noisy health-check access logs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _HealthLogFilter(logging.Filter):
     def filter(self, record):
         return "/health" not in record.getMessage()
@@ -87,13 +87,13 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
     is_footprint, reason_msg = _local_footprint_check(image_bytes)
     if not is_footprint:
         detailed_reason = (
-            "❌ **Image Quality or Content Issue**\n\n"
+            "âŒ **Image Quality or Content Issue**\n\n"
             f"Detection reason: {reason_msg}\n\n"
             "**Please upload:**\n"
             "- Clear photos of animal tracks/footprints in natural substrates\n"
             "- Visible in soil, mud, sand, snow, or dirt\n"
             "- With good lighting to show pad/toe details\n"
-            "- Minimum image size: 200×200 pixels\n\n"
+            "- Minimum image size: 200Ã—200 pixels\n\n"
             "**Avoid uploading:**\n"
             "- Photos of animals themselves\n"
             "- People, faces, or human footprints\n"
@@ -128,9 +128,9 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         
         # Size validation
         if h < 100 or w < 100:
-            return False, f"Image too small ({w}×{h}px)"
+            return False, f"Image too small ({w}Ã—{h}px)"
         if h > 8000 or w > 8000:
-            return False, f"Image too large ({w}×{h}px)"
+            return False, f"Image too large ({w}Ã—{h}px)"
         
         # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
@@ -145,9 +145,9 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         if variance < 50:
             return False, "Image lacks detail/contrast"
         
-        # ═══════════════════════════════════════════════════════════════
+        # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         # LEVEL 4 GATEKEEPER: Multi-Layer Footprint Detection
-        # ═══════════════════════════════════════════════════════════════
+        # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         
         # **LAYER 1: REJECT IMAGES WITH FACES/PEOPLE**
         # PERMANENT FIX: Two-stage detection
@@ -188,7 +188,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
                     break
             
             if face_has_skin:
-                return False, "❌ Image contains human faces - upload footprints only"
+                return False, "âŒ Image contains human faces - upload footprints only"
         
         # **LAYER 2: ENHANCED FACE/PERSON DETECTION**
         # Use multiple signals, not just color (which fails on brown earth)
@@ -209,7 +209,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # Faces typically have 2-3 horizontal stripe regions (forehead, eyes, mouth)
         # Footprints have irregular edge distribution
         if horizontal_stripes >= 3:
-            return False, "❌ Image contains facial features - upload footprints only"
+            return False, "âŒ Image contains facial features - upload footprints only"
         
         # 2b: Only use color-based detection as a secondary check (very lenient)
         # REMOVED: HSV skin detection was too sensitive to brown earth
@@ -230,7 +230,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # Screenshots typically have 20+ straight lines (UI borders, text lines)
         # Footprints have few straight lines
         if line_count > 25:
-            return False, "❌ Image contains too many straight lines/UI elements - not a natural footprint"
+            return False, "âŒ Image contains too many straight lines/UI elements - not a natural footprint"
         
         # 3b: Detect uniform color regions (characteristic of UI)
         # Divide into 4x4 grid and count regions with very uniform color
@@ -248,7 +248,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         
         # Screenshots have many uniform regions; footprints have varied texture
         if uniform_regions > 6:
-            return False, "❌ Image has too many uniform color blocks - characteristic of screenshots/diagrams"
+            return False, "âŒ Image has too many uniform color blocks - characteristic of screenshots/diagrams"
         
         # 3c: Check for corner/edge regularity (UI has regular grids)
         # Natural footprints have irregular boundaries
@@ -263,7 +263,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # Screenshots with UI buttons/fields have regular corner patterns (50+)
         # Footprints are organic, irregular (< 30 corners expected)
         if corner_count > 50:
-            return False, "❌ Image contains too many geometric corners - likely a screenshot or diagram, not a footprint"
+            return False, "âŒ Image contains too many geometric corners - likely a screenshot or diagram, not a footprint"
         
         
         # **LAYER 4: NATURAL FOOTPRINT VERIFICATION**
@@ -282,24 +282,24 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         edge_ratio = np.sum(edges_natural > 0) / (gray_small.shape[0] * gray_small.shape[1])
         
         if edge_ratio < 0.01 or edge_ratio > 0.7:
-            return False, "❌ Image edge pattern doesn't match natural footprints"
+            return False, "âŒ Image edge pattern doesn't match natural footprints"
         
         # Connected components analysis
         contours, _ = cv2.findContours(edges_natural, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         significant_contours = [c for c in contours if cv2.contourArea(c) > (gray_small.shape[0] * gray_small.shape[1] * 0.0005)]
         
         if len(significant_contours) < 1:
-            return False, "❌ Image contains no distinct shapes - not a footprint"
+            return False, "âŒ Image contains no distinct shapes - not a footprint"
         
         if len(significant_contours) > 100:
-            return False, "❌ Image is too fragmented - not a clear footprint"
+            return False, "âŒ Image is too fragmented - not a clear footprint"
         
         # Fill ratio validation
         total_area = sum(cv2.contourArea(c) for c in significant_contours)
         fill_ratio = total_area / (gray_small.shape[0] * gray_small.shape[1])
         
         if fill_ratio < 0.005 or fill_ratio > 0.8:
-            return False, "❌ Subject size doesn't match typical footprint photos"
+            return False, "âŒ Subject size doesn't match typical footprint photos"
         
         # **LAYER 5: ORGANIC vs GEOMETRIC CHECK**
         # Measure contour irregularity (footprints are irregular, diagrams are regular)
@@ -317,7 +317,7 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
             avg_circularity = np.mean(irregularity_scores)
             # If too regular (close to 1.0 like rectangles), it's likely UI/diagram
             if avg_circularity > 0.85:
-                return False, "❌ Shapes are too geometric/regular - characteristic of diagrams or UI, not footprints"
+                return False, "âŒ Shapes are too geometric/regular - characteristic of diagrams or UI, not footprints"
         
         # All Level 4 checks passed
         return True, ""
@@ -819,9 +819,9 @@ async def lifespan(app: FastAPI):
         try:
             print("[MODEL] Starting background model load...")
             load_model()
-            print("[MODEL] ✓ Model loaded successfully")
+            print("[MODEL] âœ“ Model loaded successfully")
         except Exception as e:
-            print(f"[MODEL] ✗ Failed to load model: {e}")
+            print(f"[MODEL] âœ— Failed to load model: {e}")
             print("[MODEL] Server will run in demo mode")
 
     loop = asyncio.get_event_loop()
@@ -846,7 +846,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS CONFIGURATION ───────────────────────────────────────────
+# â”€â”€ CORS CONFIGURATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Pull allowed origins from environment (comma-separated list)
 _cors_env = os.getenv("CORS_ORIGINS", "*")
 _origins = [o.strip() for o in _cors_env.split(",")] if _cors_env != "*" else ["*"]
@@ -1475,7 +1475,7 @@ async def predict(
     # Read and preprocess (now returns quality metrics and stage1 meta)
     contents = await file.read()
     
-    # ── STAGE 0: AI GATEKEEPER (Verify if image is a footprint) ──────
+    # â”€â”€ STAGE 0: AI GATEKEEPER (Verify if image is a footprint) â”€â”€â”€â”€â”€â”€
     # This prevents hallucinations (e.g., photos of people being classified as animals)
     is_valid, reason = await verify_is_footprint(contents)
     if not is_valid:
@@ -1682,7 +1682,7 @@ async def predict_batch(files: List[UploadFile] = File(...),
         try:
             contents = await file.read()
             
-            # AI GATEKEEPER 🛡️ (Check if it's actually a footprint)
+            # AI GATEKEEPER ðŸ›¡ï¸ (Check if it's actually a footprint)
             is_valid, reason = await verify_is_footprint(contents)
             if not is_valid:
                 results.append({
