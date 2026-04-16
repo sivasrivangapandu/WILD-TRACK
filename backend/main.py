@@ -154,9 +154,10 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
-        # minNeighbors=8 reduces false positives on natural textures (cracked earth, etc)
-        # while still catching actual human faces
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=8, minSize=(30, 30))
+        # minNeighbors=12 is VERY conservative - only accepts clear, obvious faces
+        # This prevents false positives on animal footprints (wolf has paw pad marks that resemble eyes)
+        # Real human frontal faces have very strong cascade matches, so high minNeighbors is safe
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=12, minSize=(50, 50))
         
         if len(faces) > 0:
             return False, "❌ Image contains human faces - upload footprints only"
