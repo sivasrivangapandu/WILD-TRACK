@@ -150,17 +150,45 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         # ═══════════════════════════════════════════════════════════════
         
         # **LAYER 1: REJECT IMAGES WITH FACES/PEOPLE**
-        # Use Haar Cascade to detect faces
+        # PERMANENT FIX: Two-stage detection
+        # Stage 1: Haar Cascade pattern detection (may have false positives on earth)
+        # Stage 2: Verify with skin tone colors (earth/rock won't have skin tones)
+        # This prevents false positives on animal footprints while still catching real faces
+        
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         )
-        # minNeighbors=12 is VERY conservative - only accepts clear, obvious faces
-        # This prevents false positives on animal footprints (wolf has paw pad marks that resemble eyes)
-        # Real human frontal faces have very strong cascade matches, so high minNeighbors is safe
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=12, minSize=(50, 50))
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
         
+        # If Haar detected something, verify it's actually a real face by checking for skin tones
         if len(faces) > 0:
-            return False, "❌ Image contains human faces - upload footprints only"
+            # Check if detected region has skin tone colors
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            
+            # Human skin tone ranges in HSV (adapted for various skin tones)
+            # H: 0-20 (reddish) + 160-180 (magenta for dark skin), S: 30-120, V: 60-255
+            lower_skin1 = np.array([0, 30, 60])
+            upper_skin1 = np.array([20, 120, 255])
+            lower_skin2 = np.array([160, 30, 60])
+            upper_skin2 = np.array([180, 120, 255])
+            
+            skin_mask1 = cv2.inRange(hsv, lower_skin1, upper_skin1)
+            skin_mask2 = cv2.inRange(hsv, lower_skin2, upper_skin2)
+            skin_mask = cv2.bitwise_or(skin_mask1, skin_mask2)
+            
+            # Check how much of detected face regions have skin tone
+            face_has_skin = False
+            for (x, y, w_face, h_face) in faces:
+                face_region = skin_mask[y:y+h_face, x:x+w_face]
+                skin_ratio = np.sum(face_region > 0) / face_region.size if face_region.size > 0 else 0
+                
+                # If >15% of face region is skin-toned, it's probably a real face
+                if skin_ratio > 0.15:
+                    face_has_skin = True
+                    break
+            
+            if face_has_skin:
+                return False, "❌ Image contains human faces - upload footprints only"
         
         # **LAYER 2: ENHANCED FACE/PERSON DETECTION**
         # Use multiple signals, not just color (which fails on brown earth)
