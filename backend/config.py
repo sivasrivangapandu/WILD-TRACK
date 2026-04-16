@@ -31,7 +31,7 @@ METADATA_PATH = os.path.join(MODELS_DIR, "model_metadata.json")
 IMG_SIZE = 300
 
 # Confidence threshold — below this, prediction is "unknown"
-CONFIDENCE_THRESHOLD = 0.40
+CONFIDENCE_THRESHOLD = 0.70  # Require 70% confidence minimum (was 40% - too permissive)
 
 # ── Model download URLs (cloud deployment) ─────────────────────────
 MODEL_URLS = {

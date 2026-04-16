@@ -72,66 +72,18 @@ from services.enhanced_prediction import (
 # ... existing imports ...
 
 async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
-    """Gatekeeper: Check if image contains a footprint using Gemini or local heuristics.
+    """Gatekeeper: Check if image contains a footprint using LOCAL HEURISTICS ONLY.
 
     Returns:
         - (True, "") if it's a footprint
         - (False, "Detailed Reason") if it's not
 
-    Uses Gemini when available, falls back to local heuristics otherwise.
+    NOTE: Gemini skipped entirely due to persistent quota exhaustion on free tier.
+    Local heuristics are fast (instant) and work well for footprint detection.
     """
     
-    # Try Gemini first if available
-    if is_gemini_available():
-        try:
-            import base64
-            prompt = (
-                "Strictly analyze this image. Does it contain an animal footprint or paw print "
-                "(a track in soil, mud, sand, or similar substrate showing the impression of an animal's foot)? "
-                "Respond ONLY with 'YES' for footprints or 'NO' for anything else. "
-                "Examples of NO: people, faces, animals themselves, landscapes, buildings, vehicles, art, drawings. "
-                "Examples of YES: pawprints, hoofprints, tracks in mud/dirt/snow."
-            )
-            b64_data = base64.b64encode(image_bytes).decode('utf-8')
-
-            # Use timeout to prevent hanging predictions
-            # Increased timeout to 10s to allow API response (was 6s)
-            result = await asyncio.wait_for(
-                asyncio.to_thread(generate_gemini_multimodal, prompt, b64_data, "image/jpeg", 10),
-                timeout=12.0  # Total timeout including thread overhead
-            )
-
-            if result is None:
-                print(f"  [DIAG] Gatekeeper: Gemini returned None, falling back to local check")
-                # Fall through to local heuristics
-            elif result.startswith("NO"):
-                reason = (
-                    "❌ **Not a Footprint Detected**\n\n"
-                    "This image does not appear to contain an animal footprint or paw print.\n\n"
-                    "**Please upload:**\n"
-                    "- Clear photos of animal tracks/footprints in natural substrates\n"
-                    "- Visible in soil, mud, sand, snow, or dirt\n"
-                    "- With good lighting to show pad/toe details\n\n"
-                    "**Avoid uploading:**\n"
-                    "- Photos of animals themselves\n"
-                    "- People, faces, or human footprints\n"
-                    "- Screenshots, drawings, or artwork\n"
-                    "- Blurry or unclear images\n"
-                    "- Unrelated landscapes without tracks"
-                )
-                print(f"  [DIAG] Gatekeeper: Image rejected by Gemini")
-                return False, reason
-            else:
-                print(f"  [DIAG] Gatekeeper: Image accepted by Gemini")
-                return True, ""
-
-        except asyncio.TimeoutError:
-            print(f"  [WARN] Gatekeeper timeout - Gemini took too long, using local check")
-        except Exception as e:
-            print(f"  [WARN] Gatekeeper Gemini check failed: {e}, using local check")
-    
-    # Fallback: Local heuristic-based footprint detection
-    print(f"  [DIAG] Using local footprint detection (more lenient thresholds)")
+    # Fast local check (instant, no API calls)
+    print(f"  [DIAG] Using fast local footprint detection")
     is_footprint, reason_msg = _local_footprint_check(image_bytes)
     if not is_footprint:
         detailed_reason = (
@@ -155,7 +107,10 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
 
 
 def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
-    """Local heuristic-based footprint detection when Gemini is unavailable.
+    """STRICT footprint detection with person/face rejection.
+    
+    Rejects: faces, people, animals, artificial objects
+    Accepts: Only animal tracks in natural substrate
     
     Returns:
         - (True, "") if image appears to be a footprint
@@ -171,76 +126,164 @@ def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
         
         h, w = img.shape[:2]
         
-        # Check minimum size
+        # Size validation
         if h < 100 or w < 100:
-            return False, f"Image too small ({w}×{h}px). Minimum 200×200px recommended"
-        
+            return False, f"Image too small ({w}×{h}px)"
         if h > 8000 or w > 8000:
-            return False, f"Image too large ({w}×{h}px). Maximum 8000px recommended"
+            return False, f"Image too large ({w}×{h}px)"
         
-        # Check if image has reasonable content (not completely black/white)
+        # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+        
+        # Brightness validation
         mean_brightness = np.mean(gray)
+        if mean_brightness < 5 or mean_brightness > 250:
+            return False, "Image too dark or too bright"
         
-        if mean_brightness < 5:
-            return False, "Image is almost completely black - appears blank"
-        
-        if mean_brightness > 250:
-            return False, "Image is almost completely white - appears blank"
-        
-        # Check image variance (blank images have very low variance)
+        # Variance check
         variance = np.var(gray)
         if variance < 50:
-            return False, "Image lacks detail/contrast - may be blank or uniform color"
+            return False, "Image lacks detail/contrast"
         
-        # Check for footprint-like features using edge detection
-        # Footprints typically have:
-        # - Defined edges (high gradient)
-        # - Regional structure (pads, toes)
-        # - Local contrast variations
+        # ═══════════════════════════════════════════════════════════════
+        # LEVEL 4 GATEKEEPER: Multi-Layer Footprint Detection
+        # ═══════════════════════════════════════════════════════════════
         
-        # Canny edge detection
-        edges = cv2.Canny(gray, 50, 150)
-        edge_ratio = np.sum(edges > 0) / (h * w)
+        # **LAYER 1: REJECT IMAGES WITH FACES/PEOPLE**
+        # Use Haar Cascade to detect faces
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
         
-        # Footprints should have moderate edge density (1-70%)
-        # Reduced from 2% to catch distant/small footprints
-        if edge_ratio < 0.01:
-            return False, "Image lacks sufficient edge detail - too smooth or uniform"
+        if len(faces) > 0:
+            return False, "❌ Image contains human faces - upload footprints only"
         
-        if edge_ratio > 0.7:
-            return False, "Image has too many edges - appears noisy or cluttered"
+        # **LAYER 2: REJECT SKIN TONE DOMINANT IMAGES**
+        # Convert to HSV for skin detection
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Check for connected components (footprints have 1-5 main regions: pads + toes)
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Skin tone ranges in HSV
+        # Brown skin: H: 0-20, 340-360; S: 20-255; V: 0-255
+        lower_skin = np.array([0, 20, 0], dtype=np.uint8)
+        upper_skin = np.array([20, 255, 255], dtype=np.uint8)
         
-        # Filter out very small contours (noise)
-        significant_contours = [c for c in contours if cv2.contourArea(c) > (h * w * 0.0005)]
+        mask_skin = cv2.inRange(hsv, lower_skin, upper_skin)
+        skin_ratio = np.sum(mask_skin > 0) / (h * w)
+        
+        # If >10% skin tone, reject (people, animals)
+        if skin_ratio > 0.10:
+            return False, "❌ Image contains too much skin/hair tone - not a footprint"
+        
+        # **LAYER 3: REJECT UI/SCREENSHOT CONTENT**
+        # Screenshots have distinctive patterns:
+        # 1. High color uniformity (UI uses flat colors)
+        # 2. Many straight lines/rectangles (UI elements)
+        # 3. Text detection (buttons, labels)
+        # 4. Limited color palette
+        
+        # 3a: Detect straight lines (characteristic of UI/screenshots)
+        edges = cv2.Canny(gray, 100, 200)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=30, maxLineGap=10)
+        line_count = len(lines) if lines is not None else 0
+        
+        # Screenshots typically have 20+ straight lines (UI borders, text lines)
+        # Footprints have few straight lines
+        if line_count > 25:
+            return False, "❌ Image contains too many straight lines/UI elements - not a natural footprint"
+        
+        # 3b: Detect uniform color regions (characteristic of UI)
+        # Divide into 4x4 grid and count regions with very uniform color
+        h_step = h // 4
+        w_step = w // 4
+        uniform_regions = 0
+        
+        for i in range(4):
+            for j in range(4):
+                region = gray[i*h_step:(i+1)*h_step, j*w_step:(j+1)*w_step]
+                if region.size > 0:
+                    # If variance is very low, it's a uniform color block (UI element)
+                    if np.var(region) < 15:
+                        uniform_regions += 1
+        
+        # Screenshots have many uniform regions; footprints have varied texture
+        if uniform_regions > 6:
+            return False, "❌ Image has too many uniform color blocks - characteristic of screenshots/diagrams"
+        
+        # 3c: Check for corner/edge regularity (UI has regular grids)
+        # Natural footprints have irregular boundaries
+        corner_count = 0
+        try:
+            corners = cv2.goodFeaturesToTrack(gray, maxCorners=500, qualityLevel=0.01, minDistance=5)
+            if corners is not None:
+                corner_count = len(corners)
+        except:
+            pass
+        
+        # Screenshots with UI buttons/fields have regular corner patterns (50+)
+        # Footprints are organic, irregular (< 30 corners expected)
+        if corner_count > 50:
+            return False, "❌ Image contains too many geometric corners - likely a screenshot or diagram, not a footprint"
+        
+        
+        # **LAYER 4: NATURAL FOOTPRINT VERIFICATION**
+        # Check for natural patterns (edges, contours, texture variations)
+        # that distinguish real footprints from artificial content
+        
+        scale = 1.0
+        if h > 1000 or w > 1000:
+            scale = max(1000 / h, 1000 / w)
+            gray_small = cv2.resize(gray, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        else:
+            gray_small = gray
+        
+        # Edge detection for natural patterns
+        edges_natural = cv2.Canny(gray_small, 50, 150)
+        edge_ratio = np.sum(edges_natural > 0) / (gray_small.shape[0] * gray_small.shape[1])
+        
+        if edge_ratio < 0.01 or edge_ratio > 0.7:
+            return False, "❌ Image edge pattern doesn't match natural footprints"
+        
+        # Connected components analysis
+        contours, _ = cv2.findContours(edges_natural, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        significant_contours = [c for c in contours if cv2.contourArea(c) > (gray_small.shape[0] * gray_small.shape[1] * 0.0005)]
         
         if len(significant_contours) < 1:
-            return False, "Image contains no distinct object or shape"
+            return False, "❌ Image contains no distinct shapes - not a footprint"
         
         if len(significant_contours) > 100:
-            return False, "Image is too fragmented - contains too many separate objects"
+            return False, "❌ Image is too fragmented - not a clear footprint"
         
-        # Check for reasonable fill factor
-        # Footprints can range from 0.5% (distant) to 90% (close-up)
+        # Fill ratio validation
         total_area = sum(cv2.contourArea(c) for c in significant_contours)
-        fill_ratio = total_area / (h * w)
+        fill_ratio = total_area / (gray_small.shape[0] * gray_small.shape[1])
         
-        # Reduced from 0.02 to 0.005 to allow small/distant footprints
-        if fill_ratio < 0.005:
-            return False, "Subject occupies less than 0.5% of image - too small or distant"
+        if fill_ratio < 0.005 or fill_ratio > 0.8:
+            return False, "❌ Subject size doesn't match typical footprint photos"
         
-        if fill_ratio > 0.97:
-            return False, "Subject occupies too much of image - likely not a footprint photo"
+        # **LAYER 5: ORGANIC vs GEOMETRIC CHECK**
+        # Measure contour irregularity (footprints are irregular, diagrams are regular)
+        irregularity_scores = []
+        for contour in significant_contours[:10]:  # Sample top 10 contours
+            area = cv2.contourArea(contour)
+            perimeter = cv2.arcLength(contour, True)
+            if perimeter > 0:
+                circularity = (4 * np.pi * area) / (perimeter ** 2)
+                # Organic shapes: circularity 0.3-0.8
+                # UI elements: circularity close to 1.0 (rectangles) or <0.2 (thin lines)
+                irregularity_scores.append(circularity)
         
-        # All checks passed
+        if irregularity_scores:
+            avg_circularity = np.mean(irregularity_scores)
+            # If too regular (close to 1.0 like rectangles), it's likely UI/diagram
+            if avg_circularity > 0.85:
+                return False, "❌ Shapes are too geometric/regular - characteristic of diagrams or UI, not footprints"
+        
+        # All Level 4 checks passed
         return True, ""
         
     except Exception as e:
-        print(f"  [WARN] Local footprint check error: {e}")
-        # On error, fail-safe: allow the image to proceed
+        print(f"  [WARN] Validation check error: {e}")
         return True, ""
 
 # Chat streaming and database routes
@@ -270,7 +313,7 @@ METADATA_PATH = os.path.join(MODELS_DIR, "model_metadata.json")
 IMG_SIZE = 300
 
 # Confidence threshold -- below this, prediction is "unknown"
-CONFIDENCE_THRESHOLD = 0.40
+CONFIDENCE_THRESHOLD = 0.70  # Require 70% confidence minimum - rejects uncertain predictions
 
 # Gemini availability is centralized in services.gemini_provider.
 gemini_model = object() if is_gemini_available() else None
