@@ -530,20 +530,8 @@ export default function UploadPage() {
       // Extract detailed error message from backend response
       let friendlyError = 'Prediction failed';
       
-      // Try to get error detail from backend response first
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === 'string') {
-          friendlyError = detail;
-        } else if (detail && typeof detail === 'object') {
-          friendlyError = detail.message || detail.error || 'Image validation failed. Please upload a clear footprint image.';
-        }
-      } else if (err.response?.status === 422) {
-        // Unprocessable Entity — likely validation error (non-footprint image)
-        friendlyError = err.response.data?.detail || 'Image validation failed. Please check the image content.';
-      } else {
-        // Fallback to generic timeout/error messages
-        const timeoutMessage = 'Prediction is taking longer than expected. The server may be waking up. Please wait a few seconds and try again.';
+        if (err.status === 422) {
+          friendlyError = err.message || 'Image validation failed. Please check the image content.';
         const msg = String(err?.message || '');
         friendlyError = /timeout|timed out|econnaborted/i.test(msg) ? timeoutMessage : msg || 'Prediction failed';
       }
