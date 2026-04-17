@@ -86,24 +86,43 @@ async def predict(
         nparr_fb = np.frombuffer(contents, np.uint8)
         img_fb = cv2.imdecode(nparr_fb, cv2.IMREAD_GRAYSCALE)
         if img_fb is not None:
-            # 1. Face Detection
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            faces = face_cascade.detectMultiScale(img_fb, scaleFactor=1.1, minNeighbors=8, minSize=(60, 60))
-            if len(faces) > 0:
-                img_color = cv2.imdecode(nparr_fb, cv2.IMREAD_COLOR)
-                hsv = cv2.cvtColor(img_color, cv2.COLOR_BGR2HSV)
+            # 1. Face Detection (Aggressive Cascades & Global Skin)
+            cascades = [
+                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'),
+                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_profileface.xml'),
+                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
+            ]
+            faces_found = []
+            for cascade in cascades:
+                if not cascade.empty():
+                    detected = cascade.detectMultiScale(img_fb, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
+                    for d in detected: faces_found.append(d)
+
+            img_color = cv2.imdecode(nparr_fb, cv2.IMREAD_COLOR)
+            hsv = cv2.cvtColor(img_color, cv2.COLOR_BGR2HSV)
+
+            if len(faces_found) > 0:
                 lower_skin1, upper_skin1 = np.array([0, 15, 60]), np.array([20, 150, 255])
                 lower_skin2, upper_skin2 = np.array([160, 15, 60]), np.array([180, 150, 255])
                 skin_mask = cv2.bitwise_or(cv2.inRange(hsv, lower_skin1, upper_skin1), cv2.inRange(hsv, lower_skin2, upper_skin2))
-                
-                for (x, y, fw, fh) in faces:
+
+                for (x, y, fw, fh) in faces_found:
                     face_region = skin_mask[y:y+fh, x:x+fw]
-                    if face_region.size > 0 and (np.sum(face_region > 0) / face_region.size) > 0.25:
+                    if face_region.size > 0 and (np.sum(face_region > 0) / face_region.size) > 0.15:
                         raise HTTPException(
-                            status_code=422, 
-                            detail="❌ **Image Quality or Content Issue**\n\nDetection reason: Image contains human faces - upload footprints only.\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates"
+                            status_code=422,
+                            detail="⚠ **Image Quality or Content Issue**\n\nDetection reason: Image contains human faces - upload footprints only.\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates"
                         )
             
+            # Global skin heuristic (arms/bodies)
+            lower_skin_g, upper_skin_g = np.array([3, 20, 60]), np.array([18, 140, 255])
+            skin_mask_g = cv2.inRange(hsv, lower_skin_g, upper_skin_g)
+            if (np.sum(skin_mask_g > 0) / skin_mask_g.size) > 0.08:
+                raise HTTPException(
+                    status_code=422,
+                    detail="⚠ **Image Quality or Content Issue**\n\nDetection reason: Image contains people/human skin - upload footprints only.\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates"
+                )
+
             # 2. Strict UI / Screenshot Detection (Sensible bounds that allow Tiger tracks but block UI frames)
             edges = cv2.Canny(img_fb, 100, 200)
             lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=80, maxLineGap=10)
