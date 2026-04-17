@@ -204,7 +204,7 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
 
             
 
-        gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+        gemini_model = genai.GenerativeModel('gemini-flash-lite-latest')
 
         prompt = '''Analyze this image strictly. Reply ONLY with a raw JSON object — no markdown, no backticks.
 
@@ -283,6 +283,9 @@ Set is_footprint = false if the image shows:
     except Exception as e:
 
         print(f"[Gemini Validation Error] {e}")
+
+        if "429" in str(e) or "quota" in str(e).lower():
+            return False, {"error": "gatekeeper_quota", "message": "Gatekeeper AI limits reached. Please try again later."}
 
         return False, {"error": "gatekeeper_error", "message": "Gatekeeper validation error. Please try again."}
 
