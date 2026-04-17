@@ -72,84 +72,76 @@ from services.enhanced_prediction import (
 # ... existing imports ...
 
 async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
-    """Gatekeeper: Check if image contains a footprint using Gemini (if available) then Local Heuristics.
+    import google.generativeai as genai
+    import json
+    import os
+    import base64
+    import cv2
+    import numpy as np
 
-    Returns:
-        - (True, "") if it's a footprint
-        - (False, "Detailed Reason") if it's not
-    """
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+    print("GEMINI_API_KEY:", GEMINI_API_KEY[:5] + "..." if GEMINI_API_KEY else "(empty)")
     
-    detailed_reason = (
-        "❌ **Image Quality or Content Issue**\n\n"
-        "Detection reason: {0}\n\n"
-        "**Please upload:**\n"
-        "- Clear photos of animal tracks/footprints in natural substrates\n"
-        "- Visible in soil, mud, sand, snow, or dirt\n"
-        "- With good lighting to show pad/toe details\n"
-        "- Minimum image size: 200×200 pixels\n\n"
-        "**Avoid uploading:**\n"
-        "- Photos of animals themselves\n"
-        "- People, faces, or human footprints\n"
-        "- Screenshots, drawings, or artwork\n"
-        "- Very blurry or out-of-focus images\n"
-        "- Unrelated landscapes without tracks"
-    )
-
-    # 1. Try Gemini Vision for reliable OOD rejection (it detects humans, UI better than OpenCV)
-    if is_gemini_available():
-        print(f"  [DIAG] Requesting Gemini Vision for robust Gatekeeper validation...")
-        try:
-            import base64
-            import numpy as np
-            import cv2
+    if not GEMINI_API_KEY:
+        print("GEMINI_API_KEY IS MISSING! EVERYTHING PASSES.")
+        return True, "Gemini not configured"
+        
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_cv is not None:
+            h, w = img_cv.shape[:2]
+            scale = min(1.0, 512 / max(h, w))
+            if scale < 1.0:
+                img_cv = cv2.resize(img_cv, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+            _, buffer = cv2.imencode('.jpg', img_cv, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            b64 = base64.b64encode(buffer).decode('utf-8')
+        else:
+            b64 = base64.b64encode(image_bytes).decode('utf-8')
             
-            # Compress image first! A 512px image uploads to Google in < 0.5 seconds, preventing the 8s fallback timeout
-            try:
-                nparr = np.frombuffer(image_bytes, np.uint8)
-                img_gem = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                if img_gem is not None:
-                    h, w = img_gem.shape[:2]
-                    scale = min(1.0, 512 / max(h, w))
-                    if scale < 1.0:
-                        img_gem = cv2.resize(img_gem, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-                    _, buffer = cv2.imencode('.jpg', img_gem, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                    image_b64 = base64.b64encode(buffer).decode('utf-8')
-                else:
-                    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-            except Exception as cv_err:
-                print(f"  [WARN] Resize failed: {cv_err}, using original config")
-                image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = '''Analyze this image strictly. Reply ONLY with a raw JSON object — no markdown, no backticks.
+Format: {"is_footprint": true_or_false, "reason": "one sentence"}
 
-            prompt = (
-                "You are an expert wildlife data validator guarding a footprint ML model. "
-                "Look closely at the image: Is it a distinct photograph of an ANIMAL PAW PRINT / FOOTPRINT (e.g. mud, sand, snow)? "
-                "IF the image contains ANY PEOPLE, COUPLES, FACES, FULL-BODY ANIMALS, UI ELEMENTS, SCREENSHOTS, ARTWORK, TEXT, or just a random LANDSCAPE with NO TRACKS, you MUST answer exactly 'NO'. "
-                "If it IS a valid animal footprint or track, answer exactly 'YES'. Your answer must be just one word: YES or NO."
-            )
-            # Increased timeout slightly, though the compression almost guarantees ~1-2s response
-            gemini_result = generate_gemini_multimodal(prompt, image_b64, timeout=12)
+Set is_footprint = true ONLY if the image clearly shows:
+- Animal paw prints, hoof marks, claw marks, or tracks
+- Footprints impressed in soil, sand, mud, snow, or similar ground
+
+Set is_footprint = false if the image shows:
+- People, human faces, selfies, or crowds
+- Screenshots, app UIs, or digital interfaces
+- Vehicles, buildings, or indoor scenes
+- Any non-footprint content
+'''
+        response = gemini_model.generate_content([
+            {'mime_type': 'image/jpeg', 'data': b64},
+            prompt
+        ], generation_config=genai.types.GenerationConfig(temperature=0.1))
+        
+        resp_text = response.text.strip().replace('```json', '').replace('```', '').strip()
+        
+        # fallback regex if json fails
+        match = re.search(r"\{[\s\S]*\}", resp_text)
+        if match:
+            resp_text = match.group(0)
             
-            if gemini_result:
-                if "NO" in gemini_result.upper() and not "YES" in gemini_result.upper():
-                    print(f"  [DIAG] Gemini rejected image: Not a real animal footprint.")
-                    return False, detailed_reason.format("Image does not appear to be an animal footprint in natural substrate. (Detected by Vision AI)")
-                elif "YES" in gemini_result.upper() and not "NO" in gemini_result.upper():
-                    print(f"  [DIAG] Gemini approved image: Passed gatekeeper.")
-                    return True, ""
-                else:
-                    print(f"  [DIAG] Gemini result unclear: '{gemini_result}', falling back to OpenCV check")
-            else:
-                print(f"  [DIAG] Gemini Vision timeout/error, falling back to OpenCV check")
-        except Exception as e:
-            print(f"  [WARN] Gemini validation exception: {e}")
-
-    # Fast local check fallback (instant, no API calls)
-    print(f"  [DIAG] Using fast local footprint detection")
-    is_footprint, reason_msg = _local_footprint_check(image_bytes)
-    if not is_footprint:
-        return False, detailed_reason.format(reason_msg)
-    
-    return True, ""
+        validation = json.loads(resp_text)
+        print("Validation result:", validation)
+        
+        is_footprint = validation.get('is_footprint', True)
+        if str(is_footprint).lower() == 'false' or is_footprint is False:
+            reason = validation.get('reason', 'Image is not a footprint.')
+            # return Detailed Reason text format
+            # Or wait, what does the endpoint do with reason?
+            # It just passes it to HTTPException(status_code=422, detail=reason)
+            return False, {"error": "not_a_footprint", "message": f"Not a valid footprint image. {reason} Please upload a clear photo of an animal track."}
+            
+        return True, ""
+    except Exception as e:
+        print(f"[Gemini Validation Error] {e}")
+        return True, "Validation unavailable"
 
 
 def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
