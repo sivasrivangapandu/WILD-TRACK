@@ -9,9 +9,14 @@ import os
 import json
 import uuid
 import datetime
+import base64
+import re
 from typing import List, Optional, Any
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
+import cv2
+import numpy as np
+import google.generativeai as genai
 
 from config import UPLOADS_DIR, CONFIDENCE_THRESHOLD, ANIMAL_INFO
 from database import get_db
@@ -26,6 +31,138 @@ from services.prediction_service import (
 Session = Any
 
 router = APIRouter()
+
+
+def _extract_json_object(text: str) -> Optional[dict]:
+    """Extract JSON object from Gemini text that may include markdown wrappers."""
+    if not text:
+        return None
+
+    cleaned = text.strip().replace("```json", "").replace("```", "").strip()
+    try:
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
+    match = re.search(r"\{[\s\S]*\}", cleaned)
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            return None
+    return None
+
+
+def _normalize_is_footprint(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1"}
+    return False
+
+
+def _is_obvious_non_footprint(image_bytes: bytes) -> Optional[str]:
+    """Fast local block for obvious non-footprint uploads (faces/people/screenshots)."""
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img_color = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img_color is None:
+        return "Unreadable image data"
+
+    gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
+
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    profile_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_profileface.xml")
+    body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_upperbody.xml")
+
+    if not face_cascade.empty():
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+        if len(faces) > 0:
+            return "Human face detected"
+
+    if not profile_cascade.empty():
+        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+        if len(profiles) > 0:
+            return "Human profile detected"
+
+    if not body_cascade.empty():
+        bodies = body_cascade.detectMultiScale(gray, scaleFactor=1.08, minNeighbors=4, minSize=(60, 60))
+        if len(bodies) > 0:
+            return "Human upper body detected"
+
+    # Screenshot-like images often have many long straight edges.
+    edges = cv2.Canny(gray, 80, 180)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=120, minLineLength=90, maxLineGap=8)
+    line_count = len(lines) if lines is not None else 0
+    if line_count > 80:
+        return "Likely screenshot or UI image"
+
+    return None
+
+
+def validate_is_footprint_strict(image_bytes: bytes) -> dict:
+    """Strict validator: reject non-footprints and fail closed on validation errors."""
+    local_reason = _is_obvious_non_footprint(image_bytes)
+    if local_reason:
+        return {"is_footprint": False, "reason": local_reason}
+
+    gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not gemini_api_key:
+        return {"is_footprint": False, "reason": "Footprint validation unavailable (missing Gemini key)"}
+
+    try:
+        genai.configure(api_key=gemini_api_key)
+
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_cv is not None:
+            h, w = img_cv.shape[:2]
+            scale = min(1.0, 512 / max(h, w))
+            if scale < 1.0:
+                img_cv = cv2.resize(img_cv, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+            _, buffer = cv2.imencode(".jpg", img_cv, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            image_b64 = base64.b64encode(buffer).decode("utf-8")
+        else:
+            image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            "Analyze this image strictly. Reply ONLY with a raw JSON object and nothing else. "
+            "Format: {\"is_footprint\": true_or_false, \"reason\": \"one sentence\"}. "
+            "Set is_footprint=true only for clear animal paw/hoof/claw tracks in natural substrate. "
+            "Set is_footprint=false for people, human faces, selfies, screenshots, UI, drawings, "
+            "vehicles, buildings, indoor scenes, or any non-footprint content."
+        )
+
+        response = gemini_model.generate_content(
+            [{"mime_type": "image/jpeg", "data": image_b64}, prompt],
+            generation_config=genai.types.GenerationConfig(temperature=0.0),
+        )
+
+        text = (getattr(response, "text", "") or "").strip()
+        parsed = _extract_json_object(text)
+
+        if parsed is not None:
+            return {
+                "is_footprint": _normalize_is_footprint(parsed.get("is_footprint", False)),
+                "reason": str(parsed.get("reason", "Validation complete")),
+            }
+
+        lowered = text.lower()
+        if "not" in lowered and "footprint" in lowered:
+            return {"is_footprint": False, "reason": "Model marked image as non-footprint"}
+        if "footprint" in lowered and "not" not in lowered:
+            return {"is_footprint": True, "reason": "Model marked image as footprint"}
+
+        return {"is_footprint": False, "reason": "Invalid validator response format"}
+    except Exception as exc:
+        print(f"[Validation Error] {exc}")
+        return {"is_footprint": False, "reason": "Footprint validation failed"}
 
 
 @router.post("/predict")
@@ -48,79 +185,15 @@ async def predict(
     contents = await file.read()
     
 
-    # ── FOOTPRINT VALIDATION ───────────────────────────────────────────
-    import google.generativeai as genai
-    import json
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
-    print("=========================================")
-    print(f"GEMINI_API_KEY LOADED: {bool(GEMINI_API_KEY)}")
-    if GEMINI_API_KEY:
-        print(f"KEY STARTS WITH: {GEMINI_API_KEY[:4]}...")
-    else:
-        print("GEMINI_API_KEY IS EMPTY OR MISSING!")
-    print("=========================================")
-    
-    validation = {'is_footprint': True, 'reason': 'Gemini not configured'}
-    if GEMINI_API_KEY:
-        try:
-            genai.configure(api_key=GEMINI_API_KEY)
-            import base64
-            import cv2
-            import numpy as np
-            
-            nparr = np.frombuffer(contents, np.uint8)
-            img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if img_cv is not None:
-                h, w = img_cv.shape[:2]
-                scale = min(1.0, 512 / max(h, w))
-                if scale < 1.0:
-                    img_cv = cv2.resize(img_cv, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-                _, buffer = cv2.imencode('.jpg', img_cv, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                b64 = base64.b64encode(buffer).decode('utf-8')
-            else:
-                b64 = base64.b64encode(contents).decode('utf-8')
-                
-            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-            prompt = '''Analyze this image strictly. Reply ONLY with a raw JSON object — no markdown, no backticks.
-Format: {"is_footprint": true_or_false, "reason": "one sentence"}
-
-Set is_footprint = true ONLY if the image clearly shows:
-- Animal paw prints, hoof marks, claw marks, or tracks
-- Footprints impressed in soil, sand, mud, snow, or similar ground
-
-Set is_footprint = false if the image shows:
-- People, human faces, selfies, or crowds
-- Screenshots, app UIs, or digital interfaces
-- Vehicles, buildings, or indoor scenes
-- Any non-footprint content
-'''
-            response = gemini_model.generate_content([
-                {'mime_type': 'image/jpeg', 'data': b64},
-                prompt
-            ], generation_config=genai.types.GenerationConfig(temperature=0.1))
-            
-            resp_text = response.text.strip().replace('```json', '').replace('```', '').strip()
-            validation = json.loads(resp_text)
-            print(f">> Gemini Validation Response: {validation}")
-        except Exception as e:
-            print(f"[Gemini Validation Error] {e}")
-            # Ensure safe fallback in case of JSON parse error or Gemini timeout
-            validation = {'is_footprint': True, 'reason': 'Validation unavailable'}
-
-    print("=========================================")
-    print("Validation result:", validation)
-    print("=========================================")
-            
-    is_footprint = validation.get('is_footprint', True)
-    if str(is_footprint).lower() == 'false' or is_footprint is False:
+    validation = validate_is_footprint_strict(contents)
+    if not validation.get("is_footprint", False):
         raise HTTPException(
             status_code=422,
-            detail=f"Not a valid footprint image. {validation.get('reason', '')} Please upload a clear photo of an animal track."
+            detail={
+                "error": "not_a_footprint",
+                "message": f"Footprint not detected. {validation.get('reason', '')}",
+            },
         )
-    # ──────────────────────────────────────────────────────────────────
 
     try:
         img_array, original, quality_metrics, stage1_meta = preprocess_image(contents, expansion_margin=0.15)
@@ -244,6 +317,16 @@ async def predict_batch(
     for file in files:
         try:
             contents = await file.read()
+            validation = validate_is_footprint_strict(contents)
+            if not validation.get("is_footprint", False):
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "error": "not_a_footprint",
+                        "message": f"Footprint not detected. {validation.get('reason', '')}",
+                    },
+                )
+
             img_array, original, quality_metrics, stage1_meta = preprocess_image(contents)
             result = predict_single(img_array, original, generate_heatmap=False, quality_metrics=quality_metrics)
 
@@ -278,6 +361,8 @@ async def predict_batch(
                 "top3": result["top3"],
                 "image_quality": quality_metrics,
             })
+        except HTTPException as e:
+            results.append({"filename": file.filename, "error": e.detail})
         except Exception as e:
             results.append({"filename": file.filename, "error": str(e)})
 
