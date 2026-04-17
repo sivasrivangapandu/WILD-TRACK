@@ -247,7 +247,7 @@ Set is_footprint = false if the image shows:
         
 
         # fallback regex if json fails
-
+        import re
         match = re.search(r"\{[\s\S]*\}", resp_text)
 
         if match:
