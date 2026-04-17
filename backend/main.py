@@ -100,14 +100,34 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
         print(f"  [DIAG] Requesting Gemini Vision for robust Gatekeeper validation...")
         try:
             import base64
-            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            import numpy as np
+            import cv2
+            
+            # Compress image first! A 512px image uploads to Google in < 0.5 seconds, preventing the 8s fallback timeout
+            try:
+                nparr = np.frombuffer(image_bytes, np.uint8)
+                img_gem = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if img_gem is not None:
+                    h, w = img_gem.shape[:2]
+                    scale = min(1.0, 512 / max(h, w))
+                    if scale < 1.0:
+                        img_gem = cv2.resize(img_gem, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+                    _, buffer = cv2.imencode('.jpg', img_gem, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                    image_b64 = base64.b64encode(buffer).decode('utf-8')
+                else:
+                    image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            except Exception as cv_err:
+                print(f"  [WARN] Resize failed: {cv_err}, using original config")
+                image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+
             prompt = (
-                "You are an expert wildlife data validator. Your job is to reject invalid user uploads before they reach the main ML model. "
-                "Analyze this image. Is it a photograph of an actual animal *paw print* or *footprint* located on the ground (mud, snow, dirt, sand, road)? "
-                "If it is a picture of humans, faces, couples, entire animals, UI elements, screenshots, artwork, text, or just a beautiful landscape without any distinct animal track, answer exactly 'NO'. "
-                "If it is an actual animal track, answer exactly 'YES'."
+                "You are an expert wildlife data validator guarding a footprint ML model. "
+                "Look closely at the image: Is it a distinct photograph of an ANIMAL PAW PRINT / FOOTPRINT (e.g. mud, sand, snow)? "
+                "IF the image contains ANY PEOPLE, COUPLES, FACES, FULL-BODY ANIMALS, UI ELEMENTS, SCREENSHOTS, ARTWORK, TEXT, or just a random LANDSCAPE with NO TRACKS, you MUST answer exactly 'NO'. "
+                "If it IS a valid animal footprint or track, answer exactly 'YES'. Your answer must be just one word: YES or NO."
             )
-            gemini_result = generate_gemini_multimodal(prompt, image_b64, timeout=8)
+            # Increased timeout slightly, though the compression almost guarantees ~1-2s response
+            gemini_result = generate_gemini_multimodal(prompt, image_b64, timeout=12)
             
             if gemini_result:
                 if "NO" in gemini_result.upper() and not "YES" in gemini_result.upper():
