@@ -196,7 +196,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error.response?.data?.detail || error.message || 'Network error';
+    let message = error.message || 'Network error';
+    const detail = error.response?.data?.detail;
+    
+    if (detail) {
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (typeof detail === 'object') {
+        message = detail.message || detail.error || JSON.stringify(detail);
+      }
+    }
+    
     const status = error.response?.status;
     
     // Smart error logging with context
