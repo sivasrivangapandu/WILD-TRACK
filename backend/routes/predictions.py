@@ -130,7 +130,7 @@ def validate_is_footprint_strict(image_bytes: bytes) -> dict:
         else:
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+          gemini_model = genai.GenerativeModel("gemini-2.5-flash")
         prompt = (
             "Analyze this image strictly. Reply ONLY with a raw JSON object and nothing else. "
             "Format: {\"is_footprint\": true_or_false, \"reason\": \"one sentence\"}. "
