@@ -262,7 +262,7 @@ def validate_is_footprint_strict(image_bytes: bytes) -> dict:
 
 
 
-        gemini_model = genai.GenerativeModel("gemini-2.5-flash")
+        gemini_model = genai.GenerativeModel("gemini-flash-lite-latest")
 
         prompt = (
 
