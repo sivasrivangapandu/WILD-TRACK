@@ -84,7 +84,7 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
     
     if not GEMINI_API_KEY:
         print("GEMINI_API_KEY IS MISSING! EVERYTHING PASSES.")
-        return True, "Gemini not configured"
+        return False, {"error": "gatekeeper_offline", "message": "Gatekeeper offline. Cannot verify footprint."}
         
     try:
         genai.configure(api_key=GEMINI_API_KEY)
@@ -101,10 +101,7 @@ async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
         else:
             b64 = base64.b64encode(image_bytes).decode('utf-8')
             
-        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = '''Analyze this image strictly. Reply ONLY with a raw JSON object — no markdown, no backticks.
-Format: {"is_footprint": true_or_false, "reason": "one sentence"}
-
+          gemini_model = genai.GenerativeModel('gemini-2.5-flash')
 Set is_footprint = true ONLY if the image clearly shows:
 - Animal paw prints, hoof marks, claw marks, or tracks
 - Footprints impressed in soil, sand, mud, snow, or similar ground
@@ -141,7 +138,7 @@ Set is_footprint = false if the image shows:
         return True, ""
     except Exception as e:
         print(f"[Gemini Validation Error] {e}")
-        return True, "Validation unavailable"
+        return False, {"error": "gatekeeper_error", "message": f"Gatekeeper validation error. Please try again."}
 
 
 def _local_footprint_check(image_bytes: bytes) -> tuple[bool, str]:
