@@ -51,8 +51,17 @@ async def predict(
     # ── FOOTPRINT VALIDATION ───────────────────────────────────────────
     import google.generativeai as genai
     import json
+    from dotenv import load_dotenv
+    load_dotenv()
     
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '').strip()
+    print("=========================================")
+    print(f"GEMINI_API_KEY LOADED: {bool(GEMINI_API_KEY)}")
+    if GEMINI_API_KEY:
+        print(f"KEY STARTS WITH: {GEMINI_API_KEY[:4]}...")
+    else:
+        print("GEMINI_API_KEY IS EMPTY OR MISSING!")
+    print("=========================================")
     
     validation = {'is_footprint': True, 'reason': 'Gemini not configured'}
     if GEMINI_API_KEY:
@@ -95,18 +104,24 @@ Set is_footprint = false if the image shows:
             
             resp_text = response.text.strip().replace('```json', '').replace('```', '').strip()
             validation = json.loads(resp_text)
-            print(f">> Gemini Validation: {validation}")
+            print(f">> Gemini Validation Response: {validation}")
         except Exception as e:
             print(f"[Gemini Validation Error] {e}")
+            # Ensure safe fallback in case of JSON parse error or Gemini timeout
             validation = {'is_footprint': True, 'reason': 'Validation unavailable'}
+
+    print("=========================================")
+    print("Validation result:", validation)
+    print("=========================================")
             
-    if not validation.get('is_footprint', True):
+    is_footprint = validation.get('is_footprint', True)
+    if str(is_footprint).lower() == 'false' or is_footprint is False:
         raise HTTPException(
             status_code=422,
             detail=f"Not a valid footprint image. {validation.get('reason', '')} Please upload a clear photo of an animal track."
         )
     # ──────────────────────────────────────────────────────────────────
-    
+
     try:
         img_array, original, quality_metrics, stage1_meta = preprocess_image(contents, expansion_margin=0.15)
     except Exception as e:
