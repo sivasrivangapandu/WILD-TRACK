@@ -72,36 +72,62 @@ from services.enhanced_prediction import (
 # ... existing imports ...
 
 async def verify_is_footprint(image_bytes: bytes) -> tuple[bool, str]:
-    """Gatekeeper: Check if image contains a footprint using LOCAL HEURISTICS ONLY.
+    """Gatekeeper: Check if image contains a footprint using Gemini (if available) then Local Heuristics.
 
     Returns:
         - (True, "") if it's a footprint
         - (False, "Detailed Reason") if it's not
-
-    NOTE: Gemini skipped entirely due to persistent quota exhaustion on free tier.
-    Local heuristics are fast (instant) and work well for footprint detection.
     """
     
-    # Fast local check (instant, no API calls)
+    detailed_reason = (
+        "❌ **Image Quality or Content Issue**\n\n"
+        "Detection reason: {0}\n\n"
+        "**Please upload:**\n"
+        "- Clear photos of animal tracks/footprints in natural substrates\n"
+        "- Visible in soil, mud, sand, snow, or dirt\n"
+        "- With good lighting to show pad/toe details\n"
+        "- Minimum image size: 200×200 pixels\n\n"
+        "**Avoid uploading:**\n"
+        "- Photos of animals themselves\n"
+        "- People, faces, or human footprints\n"
+        "- Screenshots, drawings, or artwork\n"
+        "- Very blurry or out-of-focus images\n"
+        "- Unrelated landscapes without tracks"
+    )
+
+    # 1. Try Gemini Vision for reliable OOD rejection (it detects humans, UI better than OpenCV)
+    if is_gemini_available():
+        print(f"  [DIAG] Requesting Gemini Vision for robust Gatekeeper validation...")
+        try:
+            import base64
+            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            prompt = (
+                "You are an expert wildlife data validator. Your job is to reject invalid user uploads before they reach the main ML model. "
+                "Analyze this image. Is it a photograph of an actual animal *paw print* or *footprint* located on the ground (mud, snow, dirt, sand, road)? "
+                "If it is a picture of humans, faces, couples, entire animals, UI elements, screenshots, artwork, text, or just a beautiful landscape without any distinct animal track, answer exactly 'NO'. "
+                "If it is an actual animal track, answer exactly 'YES'."
+            )
+            gemini_result = generate_gemini_multimodal(prompt, image_b64, timeout=8)
+            
+            if gemini_result:
+                if "NO" in gemini_result.upper() and not "YES" in gemini_result.upper():
+                    print(f"  [DIAG] Gemini rejected image: Not a real animal footprint.")
+                    return False, detailed_reason.format("Image does not appear to be an animal footprint in natural substrate. (Detected by Vision AI)")
+                elif "YES" in gemini_result.upper() and not "NO" in gemini_result.upper():
+                    print(f"  [DIAG] Gemini approved image: Passed gatekeeper.")
+                    return True, ""
+                else:
+                    print(f"  [DIAG] Gemini result unclear: '{gemini_result}', falling back to OpenCV check")
+            else:
+                print(f"  [DIAG] Gemini Vision timeout/error, falling back to OpenCV check")
+        except Exception as e:
+            print(f"  [WARN] Gemini validation exception: {e}")
+
+    # Fast local check fallback (instant, no API calls)
     print(f"  [DIAG] Using fast local footprint detection")
     is_footprint, reason_msg = _local_footprint_check(image_bytes)
     if not is_footprint:
-        detailed_reason = (
-            "❌ **Image Quality or Content Issue**\n\n"
-            f"Detection reason: {reason_msg}\n\n"
-            "**Please upload:**\n"
-            "- Clear photos of animal tracks/footprints in natural substrates\n"
-            "- Visible in soil, mud, sand, snow, or dirt\n"
-            "- With good lighting to show pad/toe details\n"
-            "- Minimum image size: 200×200 pixels\n\n"
-            "**Avoid uploading:**\n"
-            "- Photos of animals themselves\n"
-            "- People, faces, or human footprints\n"
-            "- Screenshots, drawings, or artwork\n"
-            "- Very blurry or out-of-focus images\n"
-            "- Unrelated landscapes without tracks"
-        )
-        return False, detailed_reason
+        return False, detailed_reason.format(reason_msg)
     
     return True, ""
 
