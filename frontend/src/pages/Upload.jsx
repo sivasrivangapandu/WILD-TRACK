@@ -532,7 +532,12 @@ export default function UploadPage() {
       
       // Try to get error detail from backend response first
       if (err.response?.data?.detail) {
-        friendlyError = err.response.data.detail;
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          friendlyError = detail;
+        } else if (detail && typeof detail === 'object') {
+          friendlyError = detail.message || detail.error || 'Image validation failed. Please upload a clear footprint image.';
+        }
       } else if (err.response?.status === 422) {
         // Unprocessable Entity — likely validation error (non-footprint image)
         friendlyError = err.response.data?.detail || 'Image validation failed. Please check the image content.';
