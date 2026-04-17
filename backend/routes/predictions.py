@@ -47,105 +47,65 @@ async def predict(
 
     contents = await file.read()
     
-    # ─── GATEKEEPER: AI Vision Validation ─────────────────────────────
-    from services.gemini_provider import is_gemini_available, generate_gemini_multimodal
-    if is_gemini_available():
-        import base64, cv2, numpy as np
+
+    # ── FOOTPRINT VALIDATION ───────────────────────────────────────────
+    import google.generativeai as genai
+    import json
+    
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+    
+    validation = {'is_footprint': True, 'reason': 'Gemini not configured'}
+    if GEMINI_API_KEY:
         try:
+            genai.configure(api_key=GEMINI_API_KEY)
+            import base64
+            import cv2
+            import numpy as np
+            
             nparr = np.frombuffer(contents, np.uint8)
-            img_gem = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if img_gem is not None:
-                h, w = img_gem.shape[:2]
+            img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img_cv is not None:
+                h, w = img_cv.shape[:2]
                 scale = min(1.0, 512 / max(h, w))
                 if scale < 1.0:
-                    img_gem = cv2.resize(img_gem, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-                _, buffer = cv2.imencode('.jpg', img_gem, [cv2.IMWRITE_JPEG_QUALITY, 85])
-                image_b64 = base64.b64encode(buffer).decode('utf-8')
+                    img_cv = cv2.resize(img_cv, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+                _, buffer = cv2.imencode('.jpg', img_cv, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                b64 = base64.b64encode(buffer).decode('utf-8')
             else:
-                image_b64 = base64.b64encode(contents).decode('utf-8')
-        except Exception:
-            image_b64 = base64.b64encode(contents).decode('utf-8')
-            
-        prompt = (
-            "You are an expert wildlife data validator guarding a footprint ML model. "
-            "Look closely at the image: Is it a distinct photograph of an ANIMAL PAW PRINT / FOOTPRINT (e.g. mud, sand, snow)? "
-            "IF the image contains ANY PEOPLE, COUPLES, FACES, FULL-BODY ANIMALS, UI ELEMENTS, SCREENSHOTS, ARTWORK, TEXT, or just a random LANDSCAPE with NO TRACKS, you MUST answer exactly 'NO'. "
-            "If it IS a valid animal footprint or track, answer exactly 'YES'. Your answer must be just one word: YES or NO."
-        )
-        gemini_result = generate_gemini_multimodal(prompt, image_b64, timeout=12)
-        if gemini_result and "NO" in gemini_result.upper() and not "YES" in gemini_result.upper():
-            raise HTTPException(
-                status_code=422, 
-                detail="❌ **Image Quality or Content Issue**\n\nDetection reason: Image does not appear to be an animal footprint in natural substrate. (Detected by Vision AI)\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates\n- Visible in soil, mud, sand, snow, or dirt\n- With good lighting to show pad/toe details\n- Minimum image size: 200x200 pixels\n\n**Avoid uploading:**\n- Photos of animals themselves\n- People, faces, or human footprints\n- Screenshots, drawings, or artwork\n- Very blurry or out-of-focus images\n- Unrelated landscapes without tracks"
-            )
-            
-    # ─── FALLBACK: Hardware Face & OOD Detection (If Gemini Quota/Timeout Fails) ────
-    import cv2
-    import numpy as np
-    try:
-        nparr_fb = np.frombuffer(contents, np.uint8)
-        img_fb = cv2.imdecode(nparr_fb, cv2.IMREAD_GRAYSCALE)
-        if img_fb is not None:
-            # 1. Face Detection (Aggressive Cascades & Global Skin)
-            cascades = [
-                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'),
-                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_profileface.xml'),
-                cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
-            ]
-            faces_found = []
-            for cascade in cascades:
-                if not cascade.empty():
-                    detected = cascade.detectMultiScale(img_fb, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60))
-                    for d in detected: faces_found.append(d)
-
-            img_color = cv2.imdecode(nparr_fb, cv2.IMREAD_COLOR)
-            hsv = cv2.cvtColor(img_color, cv2.COLOR_BGR2HSV)
-
-            if len(faces_found) > 0:
-                lower_skin1, upper_skin1 = np.array([0, 15, 60]), np.array([20, 150, 255])
-                lower_skin2, upper_skin2 = np.array([160, 15, 60]), np.array([180, 150, 255])
-                skin_mask = cv2.bitwise_or(cv2.inRange(hsv, lower_skin1, upper_skin1), cv2.inRange(hsv, lower_skin2, upper_skin2))
-
-                for (x, y, fw, fh) in faces_found:
-                    face_region = skin_mask[y:y+fh, x:x+fw]
-                    if face_region.size > 0 and (np.sum(face_region > 0) / face_region.size) > 0.15:
-                        raise HTTPException(
-                            status_code=422,
-                            detail="⚠ **Image Quality or Content Issue**\n\nDetection reason: Image contains human faces - upload footprints only.\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates"
-                        )
-            
-            # Global skin heuristic (arms/bodies)
-            lower_skin_g, upper_skin_g = np.array([3, 20, 60]), np.array([18, 140, 255])
-            skin_mask_g = cv2.inRange(hsv, lower_skin_g, upper_skin_g)
-            if (np.sum(skin_mask_g > 0) / skin_mask_g.size) > 0.08:
-                raise HTTPException(
-                    status_code=422,
-                    detail="⚠ **Image Quality or Content Issue**\n\nDetection reason: Image contains people/human skin - upload footprints only.\n\n**Please upload:**\n- Clear photos of animal tracks/footprints in natural substrates"
-                )
-
-            # 2. Strict UI / Screenshot Detection (Sensible bounds that allow Tiger tracks but block UI frames)
-            edges = cv2.Canny(img_fb, 100, 200)
-            lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=80, maxLineGap=10)
-            if lines is not None and len(lines) > 60:
-                raise HTTPException(
-                    status_code=422, 
-                    detail="❌ **Image Quality or Content Issue**\n\nDetection reason: Image contains too many straight lines/UI elements - not a natural footprint."
-                )
+                b64 = base64.b64encode(contents).decode('utf-8')
                 
-            h_fb, w_fb = img_fb.shape[:2]
-            h_step, w_step = h_fb // 4, w_fb // 4
-            uniform_regions = sum(1 for i in range(4) for j in range(4) if img_fb[i*h_step:(i+1)*h_step, j*w_step:(j+1)*w_step].size > 0 and np.var(img_fb[i*h_step:(i+1)*h_step, j*w_step:(j+1)*w_step]) < 15)
+            gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = '''Analyze this image strictly. Reply ONLY with a raw JSON object — no markdown, no backticks.
+Format: {"is_footprint": true_or_false, "reason": "one sentence"}
+
+Set is_footprint = true ONLY if the image clearly shows:
+- Animal paw prints, hoof marks, claw marks, or tracks
+- Footprints impressed in soil, sand, mud, snow, or similar ground
+
+Set is_footprint = false if the image shows:
+- People, human faces, selfies, or crowds
+- Screenshots, app UIs, or digital interfaces
+- Vehicles, buildings, or indoor scenes
+- Any non-footprint content
+'''
+            response = gemini_model.generate_content([
+                {'mime_type': 'image/jpeg', 'data': b64},
+                prompt
+            ], generation_config=genai.types.GenerationConfig(temperature=0.1))
             
-            if uniform_regions > 12:
-                raise HTTPException(
-                    status_code=422, 
-                    detail="❌ **Image Quality or Content Issue**\n\nDetection reason: Image has too many uniform color blocks - characteristic of screenshots/diagrams."
-                )
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Fallback check error: {e}")
-    # ────────────────────────────────────────────────────────────────
+            resp_text = response.text.strip().replace('```json', '').replace('```', '').strip()
+            validation = json.loads(resp_text)
+            print(f">> Gemini Validation: {validation}")
+        except Exception as e:
+            print(f"[Gemini Validation Error] {e}")
+            validation = {'is_footprint': True, 'reason': 'Validation unavailable'}
+            
+    if not validation.get('is_footprint', True):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Not a valid footprint image. {validation.get('reason', '')} Please upload a clear photo of an animal track."
+        )
+    # ──────────────────────────────────────────────────────────────────
     
     try:
         img_array, original, quality_metrics, stage1_meta = preprocess_image(contents, expansion_margin=0.15)
